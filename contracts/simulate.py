@@ -9,23 +9,40 @@ import csv
 import os
 
 
+class DuplicateSettlementError(Exception):
+    """Raised when a job_id is settled more than once."""
+
+
 class SimulatedLedger:
     def __init__(self):
         self.stakes: dict[str, float] = {}
         self.records: list[dict] = []
+        self._settled_job_ids: set[str] = set()
 
     def register_stake(self, peer_id: str, amount: float):
         self.stakes[peer_id] = self.stakes.get(peer_id, 0.0) + amount
 
     def settle(self, job_id: str, provider_peer_id: str, amount: float, verdict: str) -> dict:
+        if job_id in self._settled_job_ids:
+            raise DuplicateSettlementError(f"job {job_id} already settled")
+
         slashed = verdict == "fail"
+        available_stake = self.stakes.get(provider_peer_id, 0.0)
         if slashed:
-            self.stakes[provider_peer_id] = max(0.0, self.stakes.get(provider_peer_id, 0.0) - amount)
+            # Slash whatever stake remains, even if it's less than `amount` (insufficient stake).
+            slash_amount = min(amount, available_stake)
+            self.stakes[provider_peer_id] = available_stake - slash_amount
+        else:
+            slash_amount = 0.0
+
+        self._settled_job_ids.add(job_id)
         record = {
             "job_id": job_id,
             "provider_peer_id": provider_peer_id,
             "amount": amount,
             "slashed": slashed,
+            "slash_amount": slash_amount,
+            "fully_covered": slash_amount >= amount if slashed else True,
         }
         self.records.append(record)
         return record
@@ -37,7 +54,9 @@ class SimulatedLedger:
     def export_csv(self, path: str):
         os.makedirs(os.path.dirname(path), exist_ok=True) if os.path.dirname(path) else None
         with open(path, "w", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=["job_id", "provider_peer_id", "amount", "slashed"])
+            writer = csv.DictWriter(
+                f, fieldnames=["job_id", "provider_peer_id", "amount", "slashed", "slash_amount", "fully_covered"]
+            )
             writer.writeheader()
             writer.writerows(self.records)
 
@@ -73,5 +92,29 @@ def run_demo_scenario():
     print("\nexported to docs/results/settlement_demo.csv")
 
 
+def run_edge_case_checks():
+    """Demonstrates insufficient-stake slashing and duplicate-settlement rejection."""
+    ledger = SimulatedLedger()
+    ledger.register_stake("peer-low-stake", 0.2)
+
+    # Insufficient stake: slash amount is capped at whatever's left, not the full job amount.
+    record = ledger.settle("job-underfunded", "peer-low-stake", amount=0.5, verdict="fail")
+    print("insufficient stake case:", record)
+    assert record["slash_amount"] == 0.2
+    assert record["fully_covered"] is False
+    assert ledger.stakes["peer-low-stake"] == 0.0
+
+    # Duplicate settlement: second attempt on the same job_id must be rejected.
+    ledger.register_stake("peer-2", 10.0)
+    ledger.settle("job-x", "peer-2", amount=0.5, verdict="pass")
+    try:
+        ledger.settle("job-x", "peer-2", amount=0.5, verdict="pass")
+        raise AssertionError("expected DuplicateSettlementError")
+    except DuplicateSettlementError as e:
+        print("duplicate settlement correctly rejected:", e)
+
+
 if __name__ == "__main__":
     run_demo_scenario()
+    print("\n--- edge case checks ---")
+    run_edge_case_checks()

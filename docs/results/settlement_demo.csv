@@ -1,5 +1,5 @@
-job_id,provider_peer_id,amount,slashed
-job-1,peer-1,0.5,False
-job-2,peer-2,0.5,False
-job-3,peer-1,0.5,True
-job-4,peer-3,0.5,False
+job_id,provider_peer_id,amount,slashed,slash_amount,fully_covered
+job-1,peer-1,0.5,False,0.0,True
+job-2,peer-2,0.5,False,0.0,True
+job-3,peer-1,0.5,True,0.5,True
+job-4,peer-3,0.5,False,0.0,True
