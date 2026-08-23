@@ -1,0 +1,5 @@
+job_id,provider_peer_id,amount,slashed
+job-1,peer-1,0.5,False
+job-2,peer-2,0.5,False
+job-3,peer-1,0.5,True
+job-4,peer-3,0.5,False
