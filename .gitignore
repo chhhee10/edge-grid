@@ -9,4 +9,6 @@ cache/
 *.log
 .agent/
 .agents/
+implementation_plan.md
+
 
