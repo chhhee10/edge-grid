@@ -27,6 +27,7 @@ class EdgeGridNode:
             "model": model,
             "max_tokens": max_tokens,
             "requester_peer_id": self.peer_id,
+            "timestamp": 0,
         }
         # TODO: publish `message` (json.dumps) to the job GossipSub topic
         return job_id
