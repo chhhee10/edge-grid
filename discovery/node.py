@@ -7,15 +7,55 @@ Reference pattern: https://github.com/skorotkiewicz/conduit (DHT + model routing
 
 import json
 import uuid
+import trio
 
+from multiaddr import Multiaddr
+from libp2p import new_host
+from libp2p.peer.peerinfo import info_from_p2p_addr
+from libp2p.kad_dht import KadDHT, DHTMode
+from libp2p.tools.anyio_service.context import background_trio_service
 
 class EdgeGridNode:
-    def __init__(self, peer_id: str, listen_port: int):
+    def __init__(self, peer_id: str, listen_port: int, bootstrap_addr: str | None = None):
         self.peer_id = peer_id
         self.listen_port = listen_port
+        self.bootstrap_addr = bootstrap_addr
+
+        self.listen_addr = Multiaddr(
+            f"/ip4/127.0.0.1/tcp/{self.listen_port}"
+        )
+        self.host = new_host()
+        self.dht = KadDHT(self.host, DHTMode.SERVER)
         # TODO: initialize libp2p host, Kademlia DHT, GossipSub pubsub
 
     async def start(self):
+        async with self.host.run(listen_addrs=[self.listen_addr]):
+            async with background_trio_service(self.dht):
+            
+                print(f"Node {self.peer_id} is listening on:")
+                print(self.host.get_addrs())
+    
+                if self.bootstrap_addr:
+                    peer_info = info_from_p2p_addr(
+                        Multiaddr(self.bootstrap_addr)
+                    )
+    
+                    print(f"Connecting to {peer_info.peer_id}...")
+    
+                    await self.host.connect(peer_info)
+    
+                    print(f"Connected to {peer_info.peer_id}")
+    
+                    await trio.sleep(2)
+    
+                    print(
+                        f"DHT routing table size: "
+                        f"{self.dht.get_routing_table_size()}"
+                    )
+
+                await trio.sleep_forever()
+            
+    
         # TODO: start libp2p host, join DHT, subscribe to job topic
         raise NotImplementedError
 
