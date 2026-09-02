@@ -33,7 +33,7 @@ INFERENCE_TIMEOUT_S = _f("INFERENCE_TIMEOUT_S", 180.0)
 
 # -- judge -----------------------------------------------------------------
 GROQ_API_KEY = _s("GROQ_API_KEY", "")
-GROQ_JUDGE_MODEL = _s("GROQ_JUDGE_MODEL", "llama-3.3-70b-versatile")
+GROQ_JUDGE_MODEL = _s("GROQ_JUDGE_MODEL", "openai/gpt-oss-120b")
 JUDGE_BACKEND = _s("JUDGE_BACKEND", "ollama")        # groq | ollama | mock
 JUDGE_MODEL = _s("JUDGE_MODEL", OLLAMA_MODEL)
 PASS_THRESHOLD = _i("PASS_THRESHOLD", 3)             # score >= threshold -> pass

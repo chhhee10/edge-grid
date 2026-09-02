@@ -56,3 +56,34 @@ clean:  ## remove caches and build artefacts (keeps results and keys)
 
 nuke: clean  ## also remove the venv, node_modules and the local DA store
 	rm -rf .venv contracts/node_modules .da
+
+# -- content-addressed model weights (Objective 3 / Module 3) ---------------
+# The weight store talks to a real kubo node; these bring one up and take it
+# down. Ports are published on loopback only - see deploy/ipfs/README.md.
+# Override a busy port:  IPFS_GATEWAY_PORT=8088 make ipfs-up
+
+.PHONY: ipfs-up ipfs-down ipfs-logs weights weights-demo
+
+IPFS_COMPOSE := docker compose -f deploy/ipfs/docker-compose.yml
+
+ipfs-up:  ## start the local IPFS (kubo) node and wait for its API
+	$(IPFS_COMPOSE) up -d
+	@printf "waiting for the kubo API on 127.0.0.1:$${IPFS_API_PORT:-5001} "
+	@for i in $$(seq 1 40); do \
+	  if curl -sf -X POST http://127.0.0.1:$${IPFS_API_PORT:-5001}/api/v0/version >/dev/null; then \
+	    echo; curl -s -X POST http://127.0.0.1:$${IPFS_API_PORT:-5001}/api/v0/version; echo; \
+	    exit 0; \
+	  fi; printf '.'; sleep 1; \
+	done; echo; echo "kubo did not answer; try: $(IPFS_COMPOSE) logs" >&2; exit 1
+
+ipfs-down:  ## stop the IPFS node (the named volume, and so the blockstore, survives)
+	$(IPFS_COMPOSE) down
+
+ipfs-logs:  ## tail the IPFS node's logs
+	$(IPFS_COMPOSE) logs -f
+
+weights:  ## run the weight-distribution experiment (needs `make ipfs-up`)
+	$(PY) -m inference.weights_cli experiment
+
+weights-demo:  ## publish a synthetic weight file, fetch it cold then warm
+	$(PY) -m inference.weights_cli demo

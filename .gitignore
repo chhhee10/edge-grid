@@ -34,3 +34,6 @@ contracts/cache/
 contracts/deployment.json
 .pytest_cache/
 docs/figures/figures.json
+
+# local content-addressed weight cache
+.weights/
