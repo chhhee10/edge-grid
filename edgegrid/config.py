@@ -34,6 +34,9 @@ INFERENCE_TIMEOUT_S = _f("INFERENCE_TIMEOUT_S", 180.0)
 # -- judge -----------------------------------------------------------------
 GROQ_API_KEY = _s("GROQ_API_KEY", "")
 GROQ_JUDGE_MODEL = _s("GROQ_JUDGE_MODEL", "openai/gpt-oss-120b")
+OPENROUTER_API_KEY = _s("OPENROUTER_API_KEY", "")
+OPENROUTER_BASE_URL = _s("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+OPENROUTER_JUDGE_MODEL = _s("OPENROUTER_JUDGE_MODEL", "google/gemma-4-31b-it:free")
 JUDGE_BACKEND = _s("JUDGE_BACKEND", "ollama")        # groq | ollama | mock
 JUDGE_MODEL = _s("JUDGE_MODEL", OLLAMA_MODEL)
 PASS_THRESHOLD = _i("PASS_THRESHOLD", 3)             # score >= threshold -> pass
@@ -73,5 +76,6 @@ def snapshot() -> dict:
         for k, v in globals().items()
         if k.isupper() and not k.startswith("_")
         and isinstance(v, (str, int, float, bool, Path))
-        and k != "GROQ_API_KEY"
-    } | {"GROQ_API_KEY_SET": bool(GROQ_API_KEY)}
+        and k not in ("GROQ_API_KEY", "OPENROUTER_API_KEY")
+    } | {"GROQ_API_KEY_SET": bool(GROQ_API_KEY),
+     "OPENROUTER_API_KEY_SET": bool(OPENROUTER_API_KEY)}

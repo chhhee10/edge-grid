@@ -32,7 +32,7 @@ import httpx
 from edgegrid import config as C
 from edgegrid.schemas import Verdict, VerdictKind
 
-BACKENDS = ("groq", "ollama", "mock")
+BACKENDS = ("groq", "openrouter", "ollama", "mock")
 
 JUDGE_SYSTEM_PROMPT = """You are an expert fact-checker grading AI-generated answers for factual accuracy.
 
@@ -172,6 +172,7 @@ class Judge:
                  max_retries: int = 2, timeout_s: float = 120.0,
                  base_url: Optional[str] = None, temperature: float = 0.0,
                  num_predict: int = 220,
+                 json_mode: bool = True,
                  mock_response: Any = None):
         b = (backend or "").strip().lower()
         if b not in BACKENDS:
@@ -184,6 +185,11 @@ class Judge:
         self.timeout_s = timeout_s
         self.temperature = temperature
         self.num_predict = num_predict
+        # Strict server-side JSON is a constraint some models simply fail: on Groq
+        # the gpt-oss family returns 400 'Failed to validate JSON' on a large
+        # fraction of calls. `_parse` extracts an object from prose anyway, so
+        # the constraint can be dropped per backend without weakening parsing.
+        self.json_mode = json_mode
         self._mock_response = mock_response
         self.client: Any = None
 
@@ -202,6 +208,21 @@ class Judge:
             self.client = Groq(api_key=key)
             self.model_requested = model or C.GROQ_JUDGE_MODEL
             self.base_url = "https://api.groq.com"
+        elif b == "openrouter":
+            key = api_key if api_key is not None else C.OPENROUTER_API_KEY
+            if not key:
+                raise JudgeConfigError(
+                    "OPENROUTER_API_KEY is not set. Like groq, the openrouter backend is a "
+                    "hard requirement once selected and will not degrade to a mock.")
+            self.model_requested = model or C.OPENROUTER_JUDGE_MODEL
+            self.base_url = (base_url or C.OPENROUTER_BASE_URL).rstrip("/")
+            self.client = httpx.Client(
+                timeout=timeout_s,
+                headers={"Authorization": f"Bearer {key}",
+                         # OpenRouter asks callers to identify themselves; these
+                         # are attribution headers, not credentials.
+                         "HTTP-Referer": "https://github.com/chhhee10/edge-grid",
+                         "X-Title": "The Edge Grid"})
         elif b == "ollama":
             self.model_requested = model or C.JUDGE_MODEL
             self.base_url = (base_url or C.OLLAMA_HOST).rstrip("/")
@@ -235,7 +256,7 @@ class Judge:
                 {"role": "system", "content": JUDGE_SYSTEM_PROMPT},
                 {"role": "user", "content": JUDGE_USER_PROMPT.format(prompt=prompt, output=output)},
             ],
-            response_format={"type": "json_object"},
+            **({"response_format": {"type": "json_object"}} if self.json_mode else {}),
             temperature=self.temperature,
             max_tokens=self.num_predict,
             timeout=self.timeout_s,
@@ -245,6 +266,32 @@ class Judge:
         # server confirmed from one we merely asked for.
         served = getattr(completion, "model", "") or ""
         return (completion.choices[0].message.content or ""), served
+
+    def _call_openrouter(self, prompt: str, output: str) -> tuple[str, str]:
+        """OpenAI-compatible chat completion.
+
+        Reaches families Groq does not serve, which is what makes the diversity
+        arm of the judge-panel experiment a real comparison rather than a
+        two-point one. Errors are raised, never swallowed: an HTTP failure has
+        to become VerdictKind.ERROR upstream and be counted."""
+        payload = {
+            "model": self.model_requested,
+            "messages": [
+                {"role": "system", "content": JUDGE_SYSTEM_PROMPT},
+                {"role": "user",
+                 "content": JUDGE_USER_PROMPT.format(prompt=prompt, output=output)},
+            ],
+            "temperature": self.temperature,
+            "max_tokens": self.num_predict,
+        }
+        if self.json_mode:
+            payload["response_format"] = {"type": "json_object"}
+        r = self.client.post(f"{self.base_url}/chat/completions", json=payload)
+        r.raise_for_status()
+        body = r.json()
+        if "choices" not in body:
+            raise JudgeParseError(f"no choices in response: {str(body)[:200]}")
+        return (body["choices"][0]["message"].get("content") or ""), body.get("model", "") or ""
 
     def _call_ollama(self, prompt: str, output: str) -> tuple[str, str]:
         r = self.client.post(
@@ -283,7 +330,8 @@ class Judge:
         """Judge one answer. Always returns a Verdict; never raises for a
         backend failure - the failure becomes VerdictKind.ERROR so the caller
         counts it separately instead of mistaking it for fraud."""
-        call = {"groq": self._call_groq, "ollama": self._call_ollama,
+        call = {"groq": self._call_groq, "openrouter": self._call_openrouter,
+                "ollama": self._call_ollama,
                 "mock": self._call_mock}[self.backend]
         t0 = time.monotonic()
         last_err = ""
