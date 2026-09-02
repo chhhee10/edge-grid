@@ -8,17 +8,26 @@ Technology, Bengaluru — VTU, Belagavi. Academic Year 2026–27.**
 **Purpose of this document.** The Phase-1 Literature Survey and the Phase-1 presentation deck both
 carry an identical twenty-entry reference list. Every entry in that list has been independently
 verified against arXiv, Crossref, DBLP, the ACL Anthology, the ACM and IEEE digital libraries, the
-PMLR proceedings and the publishers' own pages. The verification established that **eleven of the
+PMLR proceedings and the publishers' own pages. The verification established that **twelve of the
 twenty entries were materially incorrect** and that **two entries do not correspond to any real
 publication**. Because a reference list that cannot survive an examiner's spot-check discredits the
 work it supports, this document supersedes the Phase-1 list. The corrected list in Section 1 is the
 list that must be reprinted in the Phase-1 report; the Phase-1 list must not be reused.
 
+**Second-pass reconciliation (Sep. 2026).** Every entry was then re-verified a second time, blind, by
+independent reviewers who did not see this document, and the two accounts were reconciled against
+primary sources. That pass **confirmed both fabrication findings** ([5] and [7]) and confirmed the
+corrections to [1]–[4], [10], [11], [13], [18]–[20]. It also **overturned one finding of this
+document**: [16] (PolyLink) was wrongly declared "not peer-reviewed" — it is a genuine IEEE
+proceedings paper, and that row has been rewritten. It further found that [12]'s title and author
+were still wrong here. Both are fixed below.
+
 The numbering [1]–[20] has been preserved so that the existing in-text citation markers in the
 Literature Survey continue to resolve. Two of those numbers, [5] and [7], previously pointed at
 publications that do not exist; each has been re-pointed at a genuine source that actually supports
-the claim the survey was making. Entries [21]–[28] are additions: systems and results that the
-survey's research-gap argument depends on but never examined.
+the claim the survey was making. Entries [21]–[29] are additions: systems and results that the
+survey's research-gap argument depends on but never examined. Entry [4b] is a further addition — the
+peer-reviewed version of [4].
 
 ---
 
@@ -53,6 +62,13 @@ Whitepaper, Aug. 2022. [Online]. Available: https://docs.arbitrum.io/nitro-white
 client security and scaling blockchains with dishonest majorities," University College London and
 Ethereum Foundation, Preprint, Sep. 2018 (rev. May 2019). [Online]. Available:
 https://arxiv.org/abs/1809.09044. arXiv:1809.09044.
+
+[4b] M. Al-Bassam, A. Sonnino, V. Buterin, and I. Khoffi, "Fraud and data availability proofs:
+Detecting invalid blocks in light clients," in *Financial Cryptography and Data Security (FC 2021)*,
+Lecture Notes in Computer Science, vol. 12675, Berlin, Germany: Springer, 2021, pp. 279–298.
+doi: 10.1007/978-3-662-64331-0_15. — *This is the peer-reviewed version of [4]: retitled, with Ismail
+Khoffi added as a fourth author. Cite [4b], not [4], wherever the report needs a refereed source for
+the fraud-proof/data-availability result; cite [4] only when quoting the preprint's own wording.*
 
 [20] J. Teutsch and C. Reitwießner, "A scalable verification solution for blockchains," TrueBit
 Whitepaper, Nov. 2017; also published in *Aspects of Computation and Automata Theory with
@@ -114,10 +130,11 @@ Canada, Jul. 2023, pp. 558–568. doi: 10.18653/v1/2023.acl-demo.54.
 [10b] A. Borzunov, M. Ryabinin, A. Chumachenko, D. Baranchuk, T. Dettmers, Y. Belkada, P. Samygin,
 and C. Raffel, "Distributed inference and fine-tuning of large language models over the Internet," in
 *Advances in Neural Information Processing Systems 36 (NeurIPS 2023)*, New Orleans, LA, USA,
-Dec. 2023, pp. 12312–12331. Preprint: arXiv:2312.08361.
+Dec. 2023. Preprint: arXiv:2312.08361.
 
-[12] DGrid Research Team, "DGrid AI: The decentralized AI smart network," DGrid Litepaper, ver. June
-2025. [Online]. Available: https://static.dgrid.ai/dgrid_litepaper.pdf
+[12] DGrid.AI, "DGrid AI: The decentralized AI inference network for open, low-cost &
+community-powered AI," Litepaper, Jun. 2025. [Online]. Available:
+https://static.dgrid.ai/dgrid_litepaper.pdf [Accessed: Sep. 3, 2026].
 
 [14] C. Tong, Y. Jiang, G. Chen, T. Zhao, S. Lu, W. Qu, E. Yang, L. Ai, and B. Yuan, "Parallax:
 Efficient LLM inference service over decentralized environment," Preprint, Sep. 2025. [Online].
@@ -129,8 +146,9 @@ Computing and Communications (EDGE)*, Shenzhen, China, Jul. 2024, pp. 35–47.
 doi: 10.1109/EDGE62653.2024.00015.
 
 [16] H. Liu, J. Cao, B. Yang, D. Bai, Y. Cao, X. Shen, Y. Zhang, J. Liang, S. Jiang, and M. Zhang,
-"PolyLink: A blockchain based decentralized edge AI platform for LLM inference," Preprint, Oct. 2025.
-[Online]. Available: https://arxiv.org/abs/2510.02395. arXiv:2510.02395.
+"PolyLink: A blockchain based decentralized edge AI platform for LLM inference," in *Proc. 2025 IEEE
+International Conference on Blockchain (Blockchain)*, 2025, pp. 101–108.
+doi: 10.1109/Blockchain67634.2025.00023. Preprint: arXiv:2510.02395.
 
 [17] H. Zhang, Y. Zhao, C. Angione, H. Yang, J. Buban, A. Farhan, F. Johnston, and P. Colangelo,
 "Towards secure and private AI: A framework for decentralized inference," in *Proc. NeurIPS 2024
@@ -151,7 +169,7 @@ Nesa and FLock — all of them research artefacts. It is not compared against a 
 decentralised-compute networks that are actually in production and selling inference today. A
 research-gap claim is only as strong as the systems it was tested against, and an examiner familiar
 with the DePIN sector will name Bittensor, Akash or Morpheus within the first minute of questioning.
-The following eight references close that exposure.
+The following nine references close that exposure.
 
 **Morpheus/Lumerin is the most urgent of these.** It is an Arbitrum-L2-settled AI inference
 marketplace in which compute providers post bids that smart contracts match — that is, the exact
@@ -162,11 +180,16 @@ the code was built from and what the survey admits to reading is the single most
 inconsistency in the Phase-1 package, and it must be closed before submission.
 
 [21] Morpheus, Trinity, and Neo (pseudonymous), "Morpheus: A network for powering smart agents,"
-Morpheus Whitepaper, Sep. 2023. [Online]. Available:
+Morpheus Whitepaper, Sep. 2, 2023. [Online]. Available:
 https://github.com/MorpheusAIs/Docs/blob/main/!KEYDOCS%20README%20FIRST!/WhitePaper.md
+[Accessed: Sep. 3, 2026]. *Note: the document is now headed "ARCHIVED: This whitepaper has been
+superseded by the modular Diátaxis documentation," and carries its own warning that parts may be
+outdated. Cite it for the Sep. 2023 design as stated; for current mechanism detail use the Yellow
+Paper in the same repository.*
 
-[22] MorpheusAIs, *Morpheus-Lumerin-Node: Proxy-router and inference marketplace node* [Computer
-software]. 2024–. [Online]. Available: https://github.com/MorpheusAIs/Morpheus-Lumerin-Node
+[22] MorpheusAIs, *Morpheus-Lumerin-Node* [Computer software]. 2024–. ("Enable interaction with
+distributed, decentralized LLMs on the Morpheus network through a desktop chat experience.")
+[Online]. Available: https://github.com/MorpheusAIs/Morpheus-Lumerin-Node
 
 [23] E. Lui and J. Sun, "Bittensor protocol: The Bitcoin in decentralized artificial intelligence? A
 critical and empirical analysis," in *Mathematical Research for Blockchain Economy: 6th International
@@ -177,8 +200,8 @@ Springer, 2026, pp. 145–165. doi: 10.1007/978-3-032-13377-9_7. Preprint: arXiv
 intelligence market," Opentensor Foundation, Whitepaper, Mar. 2020 (rev. Nov. 2021; arXiv version
 subsequently withdrawn). [Online]. Available: https://bittensor.com/whitepaper
 
-[25] G. Osuri and A. Bozanich, "AKT: Akash network token and mining economics," Overclock Labs,
-Economic Whitepaper, Mar. 2020. [Online]. Available:
+[25] G. Osuri and A. Bozanich, "AKT: Akash network token & mining economics," Akash Network,
+Whitepaper, Jan. 31, 2020. [Online]. Available:
 https://akash-web-prod.s3.amazonaws.com/uploads/2020/03/akash-econ.pdf
 
 [26] Golem Factory GmbH, "The Golem project: Crowdfunding whitepaper," Nov. 2016. [Online].
@@ -206,19 +229,19 @@ https://arxiv.org/abs/2501.17416. arXiv:2501.17416.
 | [3] | "H. **Kalodner** et al., … Offchain Labs Technical Report, **in Proc. IEEE Blockchain Conference, 2023**" | Offchain Labs whitepaper, **Aug. 2022**; sixteen authors, first author **L. Bousfield** — Kalodner is tenth. No IEEE Blockchain publication exists. (Kalodner *is* first author of the earlier "Arbitrum: Scalable, Private Smart Contracts," USENIX Security 2018 — the two papers appear to have been conflated) | Wrong authors, venue and year |
 | [4] | "in Proc. **ACM CCS, 2023**" | arXiv:1809.09044, **Sep. 2018** (rev. May 2019). Never published at ACM CCS | Wrong venue and year |
 | [4]† | Survey **table** row 4 describes this as "Celestia: A Modular Data Availability Network … (Al-Bassam et al., **Protocol Labs** / ACM CCS, 2023)" | The reference list and the table describe **two different papers**. The Celestia/LazyLedger design is a separate Al-Bassam work; Al-Bassam is UCL/Celestia Labs, not Protocol Labs | Internal inconsistency; table row must be rewritten to match [4] |
-| [5] | "S. Balaji et al., 'Proof-of-Useful-Work: Repurposing Distributed Compute for AI Tasks,' IEEE Blockchain Conference, MIT Digital Currency Initiative, 2023" | **No such publication.** Absent from IEEE Xplore, the MIT DCI publication list, DBLP, Semantic Scholar and Google Scholar. No author "S. Balaji" is associated with any PoUW work | **Fabricated** — replaced by [5a], [5b], [5c] |
+| [5] | "S. Balaji et al., 'Proof-of-Useful-Work: Repurposing Distributed Compute for AI Tasks,' IEEE Blockchain Conference, MIT Digital Currency Initiative, 2023" | **No such publication.** Absent from IEEE Xplore, the MIT DCI publication list, DBLP, Semantic Scholar and Google Scholar. No author "S. Balaji" is associated with any PoUW work. **Re-confirmed independently:** Crossref bibliographic query, OpenAlex title search, an enumeration of all 69 OpenAlex records whose titles contain "proof of useful work" (no Balaji anywhere in the set), a DBLP query returning 0 hits, an arXiv full-text query on the distinctive phrase "Repurposing Distributed Compute" returning 0 results, an exact-phrase web search, and the MIT DCI publications listing — all empty. The venue string is also incoherent: MIT DCI publishes no proceedings | **Fabricated (confirmed twice, independently)** — replaced by [5a], [5b], [5c] |
 | [6] | "in Proc. ACM SOSP, 2023" | SOSP '23, Koblenz, pp. 611–626, doi 10.1145/3600006.3613165 | Correct (page range and DOI added) |
-| [7] | "T. Eloundou et al., 'Ollama: Democratizing Local LLM Deployment on Consumer Hardware,' Springer AI & Society, vol. 39, no. 2, pp. 544–560, 2024" | **No such publication.** Ollama has never been described in a peer-reviewed paper; the repository has no `CITATION.cff` and issue #10906 is an open request for one. T. Eloundou is a genuine OpenAI researcher whose work ("GPTs are GPTs," *Science*, 2024) concerns labour-market impact and is unrelated to local inference runtimes. The volume, issue and page range are invented | **Fabricated** — replaced by software citations [7a], [7b] |
+| [7] | "T. Eloundou et al., 'Ollama: Democratizing Local LLM Deployment on Consumer Hardware,' Springer AI & Society, vol. 39, no. 2, pp. 544–560, 2024" | **No such publication.** Ollama has never been described in a peer-reviewed paper; the repository has no `CITATION.cff` and issue #10906 is an open request for one. T. Eloundou is a genuine OpenAI researcher whose work ("GPTs are GPTs: Labor market impact potential of LLMs," *Science*, vol. 384, pp. 1306–1308, 2024, doi 10.1126/science.adj0998) concerns labour-market impact and is unrelated to local inference runtimes. **Decisive check:** *AI & SOCIETY* vol. 39, no. 2 is a real issue, but its 39 articles run pp. 433–824 with no gap — the cited pp. 544–560 straddles "Ethical aspects of AI robots for agri-food" (541–555) and "An AI ethics 'David and Goliath'" (557–572). No article occupies that page range. A full Crossref enumeration of the journal, an OpenAlex title search, and a DBLP enumeration of all 23 publications by every author named Eloundou all return nothing | **Fabricated (confirmed twice, independently)** — replaced by software citations [7a], [7b] |
 | [8] | "in Proc. NeurIPS, 2023" | NeurIPS 2023 **Datasets and Benchmarks Track**; arXiv:2306.05685 | Correct (track specified) |
 | [8]† | Survey **table** row 8 titles this "LLM-as-a-Judge: Using Language Models to Evaluate Language Model Outputs" | Actual title is "Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena" | Table title invented; must match [8] |
 | [9] | "in Proc. ACL, 2022" | ACL 2022, pp. 3214–3252, doi 10.18653/v1/2022.acl-long.229 | Correct (pages and DOI added) |
 | [10] | "in Proc. **NeurIPS**, 2023" | **ACL 2023 System Demonstrations**, pp. 558–568, doi 10.18653/v1/2023.acl-demo.54. A *different* Borzunov et al. paper — "Distributed Inference and Fine-tuning of LLMs Over The Internet" — was at NeurIPS 2023; the two appear to have been merged | Wrong venue; NeurIPS paper added as [10b] |
 | [11] | "in Proc. **ICLR**, 2024" | **ICML 2024**, PMLR vol. 235, pp. 8359–8388 | Wrong venue |
-| [12] | DGrid Litepaper, June 2025 | URL returns HTTP 200; document is a corporate litepaper, not peer-reviewed | Exists; must be labelled a non-peer-reviewed industry document |
+| [12] | "**DGrid Research Team**, 'DGrid AI: The Decentralized AI **Smart** Network,' DGrid Litepaper, June 2025" | Document exists at the cited URL, and "Litepaper – June 2025" is correct. But the title page reads "**DGrid AI: The Decentralized AI Inference Network for Open, Low-Cost & Community-Powered AI**" — verified by reading page 1 of the PDF. "The Decentralized AI Smart Network" is the headline of a third-party Bitget Academy explainer about the DGAI token, not the document's title. The litepaper credits **no authors**; "DGrid Research Team" is an invented attribution — cite DGrid.AI as corporate author | Wrong title; invented author. Also a non-peer-reviewed vendor document tied to a token launch: may support descriptive architecture claims only, never a measured one |
 | [13] | "arXiv:1407.3561, **2021**" and, in the table, "arXiv **+ Springer**" | **Jul. 2014**. Never published by Springer; it is a Protocol Labs draft-3 preprint only | Wrong year; false publisher claim |
 | [14] | arXiv:2509.26182, 2025 | Confirmed, Sep. 2025, nine authors as listed | Correct (table's title variant "…over Decentralized Heterogeneous GPU Environments" must be corrected to the real title) |
 | [15] | "in Proc. IEEE EDGE, 2024" | IEEE EDGE 2024, Shenzhen, pp. 35–47, doi 10.1109/EDGE62653.2024.00015 | Correct (attribution should read Cornell **and University of Oslo**, not Cornell alone) |
-| [16] | "arXiv:2510.02395, **IEEE**, 2025" | Confirmed arXiv preprint, Oct. 2025. **No IEEE publication.** The survey calls it "the closest **peer-reviewed** academic parallel" and "the most directly comparable peer-reviewed academic system" — it has not been peer-reviewed | Correct identifier; false venue and false peer-review claim |
+| [16] | "arXiv:2510.02395, **IEEE**, 2025" | **This entry was wrongly marked "not peer-reviewed" in an earlier draft of this document; that finding is withdrawn.** PolyLink *was* published: *2025 IEEE International Conference on Blockchain (Blockchain)*, pp. 101–108, doi 10.1109/Blockchain67634.2025.00023 — confirmed by direct Crossref DOI resolution (type `proceedings-article`, publisher IEEE, all ten authors). arXiv:2510.02395 is the preprint of that paper. The cited string is merely incomplete: "IEEE" names a publisher, not a venue | Incomplete venue only. **The survey's "peer-reviewed academic parallel" claim is correct and must be reinstated** |
 | [17] | "Nesa Research, in Proc. NeurIPS RBFM Workshop, arXiv:2407.19401, 2024" | Confirmed: NeurIPS 2024 Workshop RBFM poster; arXiv:2407.19401, Jul. 2024 | Correct |
 | [18] | "**Y. Chen** et al., 'Scaling Decentralized Learning with FLock: **Blockchain-Based Trust Layer for Collaborative LLM Fine-Tuning**,' arXiv:2507.15349, 2025" | Authors are **Z. Cheng, R. Sun, J. Sun and Y. Guo** — no author named Y. Chen. Real title is "Scaling Decentralized Learning with FLock"; the subtitle after the colon is invented. The 68 % ASR-reduction figure the survey quotes **is genuine** (verified in the paper's abstract and §5) | Wrong authors; invented subtitle |
 | [19] | "in Proc. IPTPS, Springer LNCS, **2022**" | IPTPS **2002**, LNCS 2429, pp. 251–260, doi 10.1007/3-540-45748-8_24 | Wrong year (off by 20 years) |
@@ -228,11 +251,25 @@ https://arxiv.org/abs/2501.17416. arXiv:2501.17416.
 
 † = discrepancy between the survey's Table 1 row and its own reference list entry.
 
-**Tally.** Of twenty entries: **five are correct** as cited ([6], [9], [14], [15], [17], with page
-ranges and DOIs added here); **eleven carry a wrong venue, year, author list or title**; **two are
-fabricated** ([5], [7]); and **two more** ([12], [16]) are real documents misrepresented as
-peer-reviewed. Six of the twenty table rows additionally carry a paper title that does not match the
-paper.
+**Tally.** Of twenty entries:
+
+- **Six are correct as cited** — [6], [8], [9], [14], [15], [17] (page ranges, DOIs and the NeurIPS
+  track are added here for completeness, but nothing was wrong).
+- **Twelve carry a wrong venue, year, author list or title** — [1], [2], [3], [4], [10], [11], [12],
+  [13], [16], [18], [19], [20].
+- **Two are fabricated** — [5], [7].
+
+6 + 12 + 2 = 20. Two further notes that cut across those buckets rather than adding to them:
+[12] is a corporate litepaper and must never be cited as peer-reviewed; and [16]'s error runs **in
+the student's favour** — it is a genuine peer-reviewed IEEE proceedings paper that the Phase-1 string
+undersold, so fixing it strengthens rather than weakens the chapter.
+
+*Table-row title mismatches.* Five are documented above as † rows or inline: [4]†, [8]†, [14], [19]†,
+[20]†. **A human must recount these against the original Phase-1 Table 1**, which is no longer
+present in this repository (`docs/report/ch4_6_literature.md` has already been rewritten with the
+corrected table, and the `.docx` contains only a build of *this* document). An earlier draft asserted
+"six"; that figure could not be re-derived from any surviving source and has been replaced with the
+five that are individually evidenced.
 
 ---
 
@@ -256,11 +293,18 @@ measurements**, which is in fact the stronger position: the report has real numb
 TTFT, ≈9,398 ms cold, CPU-only, no NVIDIA GPU) that no cited paper could supply. Cite [7a] and [7b]
 for the software itself and the project's own runlogs for the performance claims.
 
-**4.3 Two "peer-reviewed" comparators are preprints.** PolyLink [16] and Parallax [14] are arXiv
-preprints, and DGrid [12] is a corporate litepaper. The survey leans on PolyLink as "the closest
-peer-reviewed academic parallel," which is not true. The comparison remains valuable — these are the
-right systems to compare against — but each must be labelled by what it is. An examiner who checks
-one arXiv link and finds no venue will discount every other claim in the chapter.
+**4.3 Label each comparator by what it actually is.** Parallax [14] is an arXiv preprint and DGrid
+[12] is a corporate litepaper tied to a token launch; neither is peer-reviewed, and any performance,
+cost or quality number taken from them must be attributed as the vendor's or authors' own reported
+result. **PolyLink [16] is the exception, and an earlier draft of this document got it wrong.** It is
+a peer-reviewed paper — *2025 IEEE International Conference on Blockchain*, pp. 101–108,
+doi 10.1109/Blockchain67634.2025.00023 — so the survey's description of it as "the closest
+peer-reviewed academic parallel" is accurate and should stand. What the Phase-1 string got wrong was
+only that it cited the arXiv preprint and wrote "IEEE" where the conference name belongs. The
+comparison remains valuable — these are the right systems to compare against — but each must be
+labelled by what it is. An examiner who checks one arXiv link and finds no venue will discount every
+other claim in the chapter, and an examiner who finds a real IEEE paper dismissed as a preprint will
+draw the same conclusion in the other direction.
 
 **4.4 The research-gap claim is not yet defensible.** The "no existing system combines these"
 argument was tested against seven research prototypes and zero production networks. Bittensor, Akash,
@@ -284,3 +328,60 @@ namespaced blob store with real binary Merkle inclusion proofs, a documented sta
 interface. References [3] and [4] therefore appear as **design rationale for a settlement and
 data-availability architecture**, not as citations for deployed dependencies, and the surrounding
 prose must say so.
+
+---
+
+## 5. Verification Status of the Additions, and What Still Needs a Human
+
+**5.1 Additions verified against primary sources (Sep. 3, 2026).** Each of [21]–[29], [4b], and the
+replacements [5a]–[5c] and [7a]–[7b] was confirmed to exist as described:
+
+| Ref | How it was confirmed |
+|:--|:--|
+| [4b] | Crossref DOI 10.1007/978-3-662-64331-0_15 resolves: FC 2021, LNCS, pp. 279–298, four authors incl. Khoffi |
+| [5a] | eprint.iacr.org/2017/203 title page: "Proofs of Useful Work," Ball, Rosen, Sabin, Vasudevan |
+| [5b] | Crossref DOI 10.1007/978-3-031-15979-4_12: CRYPTO 2022, LNCS, pp. 339–369, four authors as cited |
+| [5c] | Crossref DOI 10.1109/sp40001.2021.00106: IEEE S&P 2021, pp. 1039–1056, seven authors as cited |
+| [7a] | Repo live. Confirms the fabrication finding: no `CITATION.cff` (HTTP 404), root contains only LICENSE + README; issue #10906 "Recommended Citation Format for Ollama" is **open**, filed 2025-05-30 |
+| [7b] | github.com/ggml-org/llama.cpp live; description "LLM inference in C/C++" verbatim |
+| [21] | Whitepaper fetched: "Morpheus / A Network For Powering Smart Agents / Authored by Morpheus, Trinity, & Neo / Published - September 2nd 2023" |
+| [22] | GitHub API: repo created 2024-03-05, not archived |
+| [23] | Crossref DOI 10.1007/978-3-032-13377-9_7: MARBLE, Lecture Notes in Operations Research, pp. 145–165, Springer, Lui & Sun. arXiv:2507.02951 matches |
+| [24] | arXiv:2003.03917 confirms the five authors and Mar. 2020. **Withdrawal verified:** v3 (Nov. 10, 2021) states "This paper is incomplete… one of the authors (daniel attevelt) has been removed… this paper is now obsolete" |
+| [25] | PDF title page read: "AKT: Akash Network Token & Mining Economics," Greg Osuri, Adam Bozanich, *Akash Network*, **Dated: January 31, 2020**. Corrected here from the earlier "Overclock Labs, Mar. 2020" — March is the upload path, not the document date |
+| [26] | PDF title page read: "The Golem Project / Crowdfunding Whitepaper / final version / November 2016" |
+| [27] | docs.gensyn.ai/litepaper returns HTTP 200, page title "Litepaper \| Litepaper (legacy) \| Gensyn" — the "legacy edition" label is correct |
+| [28] | arXiv:2406.02239, Jun. 4 2024, five authors as cited |
+| [29] | arXiv:2501.17416, Jan. 29 2025, Andrew & Ballandies |
+
+**5.2 Do the replacements support the claims they stand in for?** Yes, with one caveat to observe.
+[5a] Ball et al. establish proofs of work built on problems of genuine computational interest; [5b]
+Fitzi et al. give a provably secure blockchain whose consensus is a useful optimisation solver; [5c]
+Jia et al. supply the formal definition of proving that a specific ML computation was performed,
+which is the closest genuine antecedent to the Agentic Verification Module. **Caveat:** none of the
+three is about *LLM inference* specifically, and [5c] Proof-of-Learning concerns *training*, not
+inference. The report must not let [5c] carry a claim about verifying inference work; it supports the
+general principle, and the project's own judge-pool design is the inference-specific contribution.
+[7a] and [7b] are software citations and support only the existence and identity of the runtimes —
+every performance number must come from the project's own runlogs, per §4.2.
+
+**5.3 Still requiring a human check.**
+
+1. ~~**Propagate the [16] reversal.**~~ **Done.** `docs/report/ch4_6_literature.md` carried the
+   withdrawn finding in four places — the mischaracterised-sources paragraph, the per-system
+   limitation note, the source-standing table row and the reference entry itself. All four now
+   state that PolyLink is a refereed IEEE Blockchain 2025 paper, and the chapter records why the
+   earlier finding was wrong: an absence from one index is not evidence of absence. The [12] DGrid
+   title and its invented "DGrid Research Team" author were corrected in the same pass, and the
+   `.docx` has been regenerated. No claim about a source's standing now differs between this file
+   and the chapter.
+2. **Recount the Phase-1 Table 1 title mismatches.** The original table is not in this repository;
+   the "six rows" figure could not be re-derived. Check it against the Phase-1 deck by hand.
+3. **[10b] page numbers.** DBLP records no page range for the NeurIPS 2023 paper. An earlier draft
+   asserted pp. 12312–12331; that could not be confirmed and has been removed rather than guessed. If
+   the Curran Associates printed proceedings are to hand, restore the range from there.
+4. **[14] Parallax** was a v1 preprint with no refereed version as of Sep. 2026. Re-check before
+   final submission in case one has appeared — the same is now known to have happened to [16].
+5. **[12] DGrid** is served from a file regenerated after its stated June 2025 date (embedded PDF
+   creation date Aug. 2026) while still bearing the June 2025 title page. The accessed date is
+   recorded above for that reason.

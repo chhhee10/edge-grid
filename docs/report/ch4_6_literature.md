@@ -81,13 +81,23 @@ one case, on this project's own measurements. Specifically:
  numbers on identified hardware and the cited paper never did. Ollama and its underlying
  `llama.cpp` substrate are cited here as software artefacts [7a], [7b], which is what they are.
 
-Three further sources are real but were mischaracterised in the Phase-1 submission and are labelled
-correctly throughout this chapter. PolyLink [16] and Parallax [14] are unrefereed arXiv preprints,
-not peer-reviewed publications; DGrid [12] is a corporate litepaper, not a research paper. All three
-are the right systems to compare against and their inclusion is retained, but the Phase-1 claim that
-PolyLink is "the closest peer-reviewed academic parallel" is withdrawn. An argument that rests part
-of its weight on the refereed standing of a comparator must state that standing accurately, or the
-argument fails the first time an examiner opens the link.
+Two further sources are real but were mischaracterised in the Phase-1 submission and are labelled
+correctly throughout this chapter. Parallax [14] is an unrefereed arXiv preprint, not a peer-reviewed
+publication; DGrid [12] is a corporate litepaper, not a research paper. Both are the right systems to
+compare against and their inclusion is retained. An argument that rests part of its weight on the
+refereed standing of a comparator must state that standing accurately, or the argument fails the
+first time an examiner opens the link.
+
+PolyLink [16] is the exception, and the correction runs the other way. An earlier draft of this
+chapter recorded it as an unrefereed preprint on the strength of its arXiv posting and of DBLP,
+which indexes only the CoRR version. It is in fact a peer-reviewed conference paper — *Proc. 2025
+IEEE International Conference on Blockchain*, pp. 101-108, doi 10.1109/Blockchain67634.2025.00023,
+IEEE Xplore document 11264675 — and the arXiv posting is its preprint. The Phase-1 description of it
+as the closest peer-reviewed academic parallel therefore stands. The original citation's only defect
+is that "IEEE" names a publisher rather than a venue, which understates the work rather than
+overstating it. The lesson is recorded here deliberately: an absence from one index is not evidence
+of absence, and a verification pass can err in the direction of accusing a source as easily as in
+the direction of accepting one.
 
 Finally, nine sources have been added. The most important of these is the Morpheus network [21] and
 its reference implementation, the Morpheus-Lumerin-Node [22]. This addition is not optional. The
@@ -511,10 +521,10 @@ academic literature, sharing three of the five pillars: blockchain settlement, j
 verification and token incentives for operators. Its geo-distributed evaluation is the most relevant
 empirical precedent for the pipeline this project builds.
 
-*Limitation, and a correction.* PolyLink is an arXiv preprint (arXiv:2510.02395, October 2025) with
-no journal reference and no IEEE publication. The Phase-1 submission describes it as "the closest
-peer-reviewed academic parallel" and "the most directly comparable peer-reviewed academic system" and
-rests part of its research-gap argument on that standing; that description is withdrawn here.
+*Standing, and limitations.* PolyLink is a peer-reviewed conference paper — *Proc. 2025 IEEE
+International Conference on Blockchain*, pp. 101-108 — of which arXiv:2510.02395 (October 2025) is
+the preprint. The Phase-1 description of it as "the closest peer-reviewed academic parallel" is
+accurate and is retained; the research-gap argument may rest on its refereed standing.
 Substantively, PolyLink does not employ a dedicated data-availability layer, does not optimise
 settlement for a Layer-2 micro-payment regime, and does not use a gossip-based sealed-bid auction for
 matching.
@@ -722,7 +732,7 @@ modules of Figure 4.1; the standing column is recorded because Chapter 5's compa
 | [7a] | Ollama | 3 | M3 Inference | Software artefact |
 | [7b] | llama.cpp | 3 | M3 Inference | Software artefact |
 | [13] | IPFS (Benet, 2014) | 3 | Model storage (rationale) | Preprint, draft 3 |
-| [16] | PolyLink (Liu et al., 2025) | 3 | Comparator | Preprint, not refereed |
+| [16] | PolyLink (Liu et al., 2025) | 3 | Comparator | Peer-reviewed, IEEE Blockchain 2025 |
 | [12] | DGrid AI (2025) | 3 | Comparator | Corporate litepaper |
 | [21] | Morpheus whitepaper (2023) | 3 | Comparator, M5 pattern | Pseudonymous whitepaper |
 | [22] | Morpheus-Lumerin-Node | 3 | M5 reference implementation | Software artefact |
@@ -1340,8 +1350,9 @@ M. I. Jordan, J. E. Gonzalez, and I. Stoica, "Chatbot Arena: An open platform fo
 human preference," in *Proc. 41st International Conference on Machine Learning (ICML 2024)*, Vienna,
 Austria, Jul. 2024, PMLR, vol. 235, pp. 8359–8388. Preprint: arXiv:2403.04132.
 
-[12] DGrid Research Team, "DGrid AI: The decentralized AI smart network," DGrid Litepaper, ver. June
-2025. [Online]. Available: https://static.dgrid.ai/dgrid_litepaper.pdf
+[12] DGrid.AI, "DGrid AI: The decentralized AI inference network for open, low-cost &
+community-powered AI," Litepaper, Jun. 2025. [Online]. Available:
+https://static.dgrid.ai/dgrid_litepaper.pdf [Accessed: Sep. 3, 2026].
 
 [13] J. Benet, "IPFS — Content addressed, versioned, P2P file system (draft 3)," Protocol Labs,
 Technical Report, Jul. 2014. [Online]. Available: https://arxiv.org/abs/1407.3561. arXiv:1407.3561.
@@ -1356,8 +1367,9 @@ Computing and Communications (EDGE)*, Shenzhen, China, Jul. 2024, pp. 35–47.
 doi: 10.1109/EDGE62653.2024.00015.
 
 [16] H. Liu, J. Cao, B. Yang, D. Bai, Y. Cao, X. Shen, Y. Zhang, J. Liang, S. Jiang, and M. Zhang,
-"PolyLink: A blockchain based decentralized edge AI platform for LLM inference," Preprint, Oct. 2025.
-[Online]. Available: https://arxiv.org/abs/2510.02395. arXiv:2510.02395.
+"PolyLink: A blockchain based decentralized edge AI platform for LLM inference," in Proc. 2025 IEEE
+Int. Conf. Blockchain (Blockchain), 2025, pp. 101-108, doi: 10.1109/Blockchain67634.2025.00023.
+Preprint: arXiv:2510.02395, Oct. 2025.
 
 [17] H. Zhang, Y. Zhao, C. Angione, H. Yang, J. Buban, A. Farhan, F. Johnston, and P. Colangelo,
 "Towards secure and private AI: A framework for decentralized inference," in *Proc. NeurIPS 2024
