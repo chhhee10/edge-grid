@@ -680,7 +680,14 @@ def test_settlements_endpoint_publishes_the_reversal_aware_totals(client):
 def test_stats_reports_the_judge_that_actually_ruled_not_the_configured_one(grid,
                                                                            monkeypatch):
     """`judge_backend` in stats is the CONFIGURED backend - what the next job
-    would use. Verdicts already recorded may have come from another one."""
+    would use. Verdicts already recorded may have come from another one.
+
+    Both backends are pinned explicitly rather than inherited from the ambient
+    configuration: the distinction under test is precisely that the two can
+    differ, so a test that reads either of them from the environment passes or
+    fails according to whatever is in .env, which is how this one broke when the
+    project's default judge changed."""
+    monkeypatch.setattr(C, "JUDGE_BACKEND", "ollama")
     _drain(grid, **JOB)
     monkeypatch.setattr(C, "JUDGE_BACKEND", "groq")
     s = grid.stats()
