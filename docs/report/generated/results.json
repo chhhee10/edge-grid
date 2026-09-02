@@ -56,5 +56,51 @@
   "cost_central": 0.002,
   "cost_ratio": 0.5757,
   "verification_share_pct": 4.76,
+  "weights_n": 5,
+  "weights_all_verified": true,
+  "weights_max_speedup": 895.8,
+  "weights_tamper_rejected": 3,
+  "weights_tamper_cases": 4,
+  "weights_lru_correct": true,
+  "swarm_latencies_ms": [
+    0.0,
+    10.0,
+    25.0,
+    50.0
+  ],
+  "swarm_first_bid_ms": [
+    6.0,
+    44.5,
+    71.0,
+    114.0
+  ],
+  "swarm_runs": [
+    "exp2-swarm-containers-20260902T170808Z",
+    "exp2-swarm-netem-10ms-20260902T164741Z",
+    "exp2-swarm-netem-25ms-20260902T164817Z",
+    "exp2-swarm-netem-50ms-20260902T164859Z"
+  ],
+  "panel_run": "judge-panel-20260902T173031Z",
+  "panel_complete_configs": [
+    "qwen-27b",
+    "minimax-m3",
+    "panel-majority",
+    "panel-unanimous",
+    "panel-any_fail"
+  ],
+  "panel_unusable_configs": [
+    "nemotron-120b",
+    "ling-3-flash"
+  ],
+  "panel_qwen-27b_recall": 0.975,
+  "panel_qwen-27b_fpr": 0.2632,
+  "panel_minimax-m3_recall": 0.9625,
+  "panel_minimax-m3_fpr": 0.1579,
+  "panel_panel-majority_recall": 0.9747,
+  "panel_panel-majority_fpr": 0.0667,
+  "panel_panel-unanimous_recall": 0.9747,
+  "panel_panel-unanimous_fpr": 0.0769,
+  "panel_panel-any_fail_recall": 0.975,
+  "panel_panel-any_fail_fpr": 0.3684,
   "_skipped": {}
 }

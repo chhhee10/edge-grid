@@ -83,3 +83,66 @@
 
 *Generated from run `cost-20260902T123714Z` at commit `37378fd`. GRID has no market price. Dollar figures are a cost MODEL at a stated notional rate, not a market observation. The GRID-denominated and gas-denominated figures are the actual measurements.*
 
+
+### Table 8.8 - Content-addressed weight distribution
+
+| Artefact (bytes) | MiB | Cold fetch (ms) | Warm fetch (ms) | Speed-up | CID re-verified |
+|:---|---:|---:|---:|---:|---:|
+| 65536 | 0.06 | 6.6 | 0.38 | 17x | yes |
+| 1048576 | 1.00 | 18.6 | 1.51 | 12x | yes |
+| 4194304 | 4.00 | 40.2 | 0.43 | 94x | yes |
+| 16777216 | 16.00 | 135.1 | 0.66 | 205x | yes |
+| 50331648 | 48.00 | 317.5 | 0.35 | 896x | yes |
+
+### Table 8.9 - Tamper detection, with an honest control
+
+| Case | Outcome | Exception |
+|:---|:---|:---|
+| store serves other artefact | REJECTED | CIDMismatch |
+| cached artefact bit flipped | REJECTED | nan |
+| resolver on corrupted cache | REJECTED | ContentHashMismatch |
+| control honest artefact | ACCEPTED | nan |
+
+*Generated from run `weights-20260902T170213Z` at commit `75df836`. Verification recomputes the CID after download rather than trusting the daemon that served it.*
+
+
+### Table 8.10 - Auction timing across container network namespaces
+
+| Injected RTT (ms) | Nodes | Auctions | First bid (ms) | Last bid (ms) | Mesh forms (s) |
+|:---|---:|---:|---:|---:|---:|
+| 0 | 3 | 1 | 6.0 | 7.0 | 5.9 |
+| 10 | 3 | 2 | 44.5 | 51.0 | 12.0 |
+| 25 | 3 | 2 | 71.0 | 73.5 | 14.0 |
+| 50 | 3 | 2 | 114.0 | 117.5 | 14.7 |
+
+*Each node is a container with its own network namespace and a distinct address on a bridge, so peers no longer share a loopback interface. This is not a LAN deployment: one kernel, no physical NIC, no wide-area path. Latency is injected with `tc netem`.*
+
+
+### Table 8.11 - Judge configurations against the two hard strategies
+
+| Judge | Strategy | Recall | FPR | Precision (bal.) | Errors |
+|:---|:---|---:|---:|---:|:---|
+| qwen-27b | negate | 100% | 26% | 79% | 0/39 |
+| qwen-27b | swap incorrect | 95% | 26% | 78% | 0/39 |
+| qwen-27b | OVERALL | 98% | 26% | 79% | 0/99 |
+| nemotron-120b | negate | 100% | 0% | 100% | 32/39 **unusable** |
+| nemotron-120b | swap incorrect | 100% | 0% | 100% | 32/39 **unusable** |
+| nemotron-120b | OVERALL | 100% | 0% | 100% | 83/99 **unusable** |
+| minimax-m3 | negate | 100% | 16% | 86% | 0/39 |
+| minimax-m3 | swap incorrect | 90% | 16% | 85% | 0/39 |
+| minimax-m3 | OVERALL | 96% | 16% | 86% | 0/99 |
+| ling-3-flash | negate | 100% | 0% | 100% | 36/39 **unusable** |
+| ling-3-flash | swap incorrect | 100% | 0% | 100% | 35/39 **unusable** |
+| ling-3-flash | OVERALL | 100% | 0% | 100% | 86/99 **unusable** |
+| panel-majority | negate | 100% | 7% | 94% | 4/39 |
+| panel-majority | swap incorrect | 95% | 7% | 93% | 5/39 |
+| panel-majority | OVERALL | 97% | 7% | 94% | 5/99 |
+| panel-unanimous | negate | 100% | 8% | 93% | 6/39 |
+| panel-unanimous | swap incorrect | 95% | 8% | 92% | 7/39 |
+| panel-unanimous | OVERALL | 97% | 8% | 93% | 7/99 |
+| panel-any_fail | negate | 100% | 37% | 73% | 0/39 |
+| panel-any_fail | swap incorrect | 95% | 37% | 72% | 0/39 |
+| panel-any_fail | OVERALL | 98% | 37% | 73% | 0/99 |
+
+*Generated from run `judge-panel-20260902T173031Z` at commit `f02eca6`. A configuration whose error rate exceeds 40% is marked unusable: its rates are computed over the few judgements that completed and carry no weight.*
+

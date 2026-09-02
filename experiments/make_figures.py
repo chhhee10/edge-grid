@@ -394,6 +394,56 @@ def fig_cost(out: Path) -> str:
     return style.finish(fig, out / "fig_cost.png")
 
 
+
+def fig_swarm(out: Path) -> str:
+    """Auction timing against injected round-trip latency.
+
+    The single-host experiment could not produce this figure at all: with every
+    peer on one loopback interface there is no link to delay. Each point here is
+    a container with its own network namespace and `tc netem` on its interface,
+    so the independent variable is a real property of a real link.
+    """
+    import json as _j
+    pts = []
+    for exp in ("exp2-swarm-containers", "exp2-swarm-netem-10ms",
+                "exp2-swarm-netem-25ms", "exp2-swarm-netem-50ms"):
+        try:
+            run = _run(exp); a = _csv(run, "auctions")
+        except Skip:
+            continue
+        lat = float(_j.loads((run / "config.json").read_text())
+                    ["params"].get("latency_ms") or 0.0)
+        pts.append((lat, a["first_bid_ms"].mean(), a["last_bid_ms"].mean(), len(a), run.name))
+    if len(pts) < 2:
+        raise Skip("need at least two container swarm runs to plot a response")
+    pts.sort()
+    x = np.array([p[0] for p in pts], float)
+    first = np.array([p[1] for p in pts], float)
+    last = np.array([p[2] for p in pts], float)
+
+    fig, ax = plt.subplots(figsize=(6.8, 3.4))
+    ax.plot(x, first, color=CATEGORICAL[0], marker=MARKERS[0], label="first bid arrives")
+    ax.plot(x, last, color=CATEGORICAL[1], marker=MARKERS[1], label="last bid arrives")
+    # A request and its reply each cross the delayed link, so the expected
+    # slope is 2 ms of added latency per 1 ms of injected one-way delay.
+    ax.plot(x, first[0] + 2 * x, color=INK_2, linestyle=":", linewidth=1.4,
+            label="first bid + 2x injected delay (round trip)")
+    for xi, yi in zip(x, last):
+        ax.annotate(f"{yi:.0f}", xy=(xi, yi), xytext=(0, 9), textcoords="offset points",
+                    ha="center", fontsize=8, color=CATEGORICAL[1])
+    ax.set_xlabel("Injected one-way latency per link (ms, tc netem)")
+    ax.set_ylabel("Milliseconds after broadcast")
+    ax.set_title("Auction timing versus link latency, container topology")
+    ax.set_xticks(x)
+    ax.set_ylim(bottom=0)
+    style.legend_top(ax, ncol=3)
+    n = sum(p[3] for p in pts)
+    style.caption(ax, f"{n} auctions over {len(pts)} latency settings, 3 nodes - each peer in "
+                      f"its own network namespace with a distinct address; one kernel, so this "
+                      f"is link delay, not a wide-area path")
+    return style.finish(fig, out / "fig_swarm.png")
+
+
 FIGURES = {
     "ttft": fig_ttft,
     "auction": fig_auction,
@@ -402,6 +452,7 @@ FIGURES = {
     "paraphrase": fig_paraphrase,
     "gas": fig_gas,
     "cost": fig_cost,
+    "swarm": fig_swarm,
 }
 
 

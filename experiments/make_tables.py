@@ -245,7 +245,108 @@ def t_cost(head: dict) -> tuple[str, str]:
     return "cost", md
 
 
-TABLES = [t_latency, t_auction, t_verification, t_paraphrase, t_settlement, t_cost]
+
+
+def t_weights(head: dict) -> tuple[str, str]:
+    """Objective 3's weight-distribution clause, and the tamper controls."""
+    run = _run("weights")
+    a = _csv(run, "artefacts")
+    rows = [[r.model_id.replace("synth-weights-", ""), f"{int(r.bytes)/2**20:,.2f}",
+             f"{r.cold_fetch_ms:,.1f}", f"{r.warm_fetch_ms:,.2f}",
+             f"{r.speedup:,.0f}x", "yes" if r.cid_verified else "**NO**"]
+            for r in a.itertuples()]
+    md = ("### Table 8.8 - Content-addressed weight distribution\n\n"
+          + _md(["Artefact (bytes)", "MiB", "Cold fetch (ms)", "Warm fetch (ms)",
+                 "Speed-up", "CID re-verified"], rows))
+    v = _csv(run, "verification")
+    vr = [[str(r.case).replace("_", " "), str(r.outcome),
+           str(getattr(r, "exception", "") or "-")] for r in v.itertuples()]
+    md += ("\n\n### Table 8.9 - Tamper detection, with an honest control\n\n"
+           + _md(["Case", "Outcome", "Exception"], vr, align="lll"))
+    head.update({
+        "weights_n": len(a),
+        "weights_all_verified": bool(a["cid_verified"].all()),
+        "weights_max_speedup": float(a["speedup"].max()),
+        "weights_tamper_rejected": int((v["outcome"] == "REJECTED").sum()),
+        "weights_tamper_cases": int(len(v)),
+    })
+    try:
+        lru = _csv(run, "lru_order")
+        head["weights_lru_correct"] = bool(lru["correct"].iloc[0])
+    except Skip:
+        pass
+    return "weights", md + _stamp(run, "Verification recomputes the CID after download "
+                                       "rather than trusting the daemon that served it.")
+
+
+def t_swarm(head: dict) -> tuple[str, str]:
+    """Auction timing once peers stop sharing a loopback interface."""
+    import json as _j
+    rows, lats = [], []
+    for exp in ("exp2-swarm-containers", "exp2-swarm-netem-10ms",
+                "exp2-swarm-netem-25ms", "exp2-swarm-netem-50ms"):
+        try:
+            run = _run(exp)
+            a = _csv(run, "auctions")
+        except Skip:
+            continue
+        lat = float(_j.loads((run / "config.json").read_text())
+                    ["params"].get("latency_ms") or 0.0)
+        lats.append((lat, run.name))
+        rows.append([f"{lat:.0f}", int(a["n_nodes"].iloc[0]), len(a),
+                     f"{a['first_bid_ms'].mean():.1f}", f"{a['last_bid_ms'].mean():.1f}",
+                     f"{a['mesh_ready_ms'].mean()/1000:.1f}"])
+    if not rows:
+        raise Skip("no container swarm runs")
+    rows.sort(key=lambda r: float(r[0]))
+    md = ("### Table 8.10 - Auction timing across container network namespaces\n\n"
+          + _md(["Injected RTT (ms)", "Nodes", "Auctions", "First bid (ms)",
+                 "Last bid (ms)", "Mesh forms (s)"], rows))
+    head.update({"swarm_latencies_ms": [l for l, _ in sorted(lats)],
+                 "swarm_first_bid_ms": [float(r[3]) for r in rows],
+                 "swarm_runs": [n for _, n in sorted(lats)]})
+    return "swarm", md + ("\n\n*Each node is a container with its own network namespace "
+                          "and a distinct address on a bridge, so peers no longer share a "
+                          "loopback interface. This is not a LAN deployment: one kernel, "
+                          "no physical NIC, no wide-area path. Latency is injected with "
+                          "`tc netem`.*\n")
+
+
+def t_judge_panel(head: dict) -> tuple[str, str]:
+    """The size-versus-family question, and what a quorum buys."""
+    run = _run("judge-panel")
+    d = _csv(run, "summary")
+    keep = d[d.strategy.isin(["negate", "swap_incorrect", "OVERALL"])]
+    rows = []
+    for r in keep.itertuples():
+        err = int(getattr(r, "ERR_fraud", 0)) + int(getattr(r, "ERR_honest", 0))
+        n = int(r.N_fraud) + int(r.N_honest)
+        rows.append([r.config, r.strategy.replace("_", " "),
+                     f"{r.recall:.0%}", f"{r.fpr:.0%}",
+                     f"{getattr(r, 'precision_bal', float('nan')):.0%}",
+                     f"{err}/{n}" + (" **unusable**" if err > n * 0.4 else "")])
+    md = ("### Table 8.11 - Judge configurations against the two hard strategies\n\n"
+          + _md(["Judge", "Strategy", "Recall", "FPR", "Precision (bal.)", "Errors"], rows,
+                align="llrrrl"))
+    comp = d[(d.strategy == "OVERALL") &
+             ((d.get("ERR_fraud", 0).fillna(0) + d.get("ERR_honest", 0).fillna(0))
+              < 0.4 * (d.N_fraud + d.N_honest))]
+    head.update({
+        "panel_run": run.name,
+        "panel_complete_configs": comp.config.tolist(),
+        "panel_unusable_configs": d[(d.strategy == "OVERALL") &
+                                    ~d.config.isin(comp.config)].config.tolist(),
+    })
+    for r in comp.itertuples():
+        head[f"panel_{r.config}_recall"] = float(r.recall)
+        head[f"panel_{r.config}_fpr"] = float(r.fpr)
+    return "judge_panel", md + _stamp(
+        run, "A configuration whose error rate exceeds 40% is marked unusable: its rates "
+             "are computed over the few judgements that completed and carry no weight.")
+
+
+TABLES = [t_latency, t_auction, t_verification, t_paraphrase, t_settlement,
+          t_cost, t_weights, t_swarm, t_judge_panel]
 
 
 def main(argv=None) -> int:
