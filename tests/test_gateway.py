@@ -1038,24 +1038,26 @@ def test_dashboard_marks_reversed_ledger_rows(client):
 
 
 def test_dashboard_palette_is_rationed_and_semantic(client):
-    """Colour is part of the spec: one structural accent plus reserved status
-    hues. A stray fourth hue means something decorative crept in, and a red cell
-    would stop reliably meaning "this is wrong"."""
+    """Colour is part of the spec: one ground, one ink family, a single violet
+    accent, and reserved status hues. A stray extra hue means something
+    decorative crept in, and a red cell would stop reliably meaning "wrong"."""
     import re
 
     css = client.get("/static/styles.css").text
     hexes = {h.lower() for h in re.findall(r"#([0-9a-fA-F]{6})\b", css)}
     allowed = {
-        "f6f5f1", "fffefb", "efeee8",          # paper, surface, sunk
-        "16181c", "565b63", "8b9098",          # ink, secondary, dim
-        "dcd9d1", "c6c2b8",                    # hairlines
-        "1d4e89", "e5ecf5", "b6c8de",          # the one structural accent
-        "2c6b4a", "e2efe7", "b3d2c0",          # status: good
-        "8a5a10", "f6eeda", "ddc794", "6d4708",  # status: warning
-        "9d3626", "f7e7e3", "d9b6ad", "7d2b1e",  # status: bad
+        "f2f2f2", "ffffff", "e8e8e8",                  # ground, plate, sunk
+        "1d1956", "322c8a", "1d1c1d", "6c6991", "a6a9b3",  # indigo, wordmark, ink, muted, dim
+        "d5d5d5", "c4c4c4",                            # hairlines
+        "755cfe", "5d4ee7", "c9c2f5", "f1eefe",        # the one accent + its tints
+        "2f9d4e", "e8f6ec", "b6ddc2",                  # status: good
+        "a8710a", "fbf2e0", "e3cd9a", "7a5208",        # status: warning
+        "d63c3e", "fdeced", "f0bfc0", "9c2c2e",        # status: bad
+        "ff0a5e",                                      # the flagged tile fill
     }
     assert hexes <= allowed, f"unexpected colours: {sorted(hexes - allowed)}"
     assert "fonts.googleapis" not in css, "the console must render with no network"
+    assert "@import" not in css, "no remote stylesheet imports either"
 
 
 # --------------------------------------------------------------------------
