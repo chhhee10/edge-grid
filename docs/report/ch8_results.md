@@ -8,6 +8,16 @@ figures, followed by a settlement measurement taken against a live chain, an exp
 of the seven objectives of Chapter 3, and a statement of the threats to the validity of everything
 reported here.
 
+Three further measurements were taken after those four experiments were complete, and each is
+reported alongside the experiment whose result it extends. Sections 8.2.4 and 8.2.5 measure
+content-addressed model-weight distribution against a real IPFS daemon, which is the clause of
+Objective 3 that was unimplemented when the four experiments were run. Section 8.3.5 repeats the
+auction across containers that do not share a loopback interface, which removes the largest single
+threat to the validity of Section 8.3 and makes a latency response measurable for the first time.
+Sections 8.4.10 to 8.4.14 put the corruption set of Experiment 3 past four larger judges and a
+quorum, which resolves a confound Section 8.4.7 was obliged to leave open — and, in doing so,
+refutes a hypothesis this report itself advanced.
+
 Two commitments govern the whole chapter. The first is that every figure quoted in the prose is
 taken from a file in a timestamped run directory under `docs/results/`, and no figure is restated
 from memory, rounded differently from the table it appears in, or estimated where it was not
@@ -19,11 +29,14 @@ explanation of it, and derives three architectural consequences from it. It is p
 centre of the chapter rather than in a concluding caveat because it is the most useful thing the
 experiments produced.
 
-Tables 8.1 to 8.7 are emitted mechanically by `experiments/make_tables.py` directly from the
-result CSVs, and are reproduced here verbatim including their provenance captions. Tables 8.8 and
-8.9 are analysis tables compiled by hand from the same run directories; they are numbered after
-the generated set, which is why Table 8.8 is referred to in Section 8.4 although its number falls
-after tables that appear in Section 8.5.
+Tables 8.1 to 8.11 are emitted mechanically by `experiments/make_tables.py` directly from the
+result CSVs, and are reproduced here verbatim including their provenance captions. Tables 8.12 and
+8.13 are analysis tables compiled by hand from the same run directories; they are numbered after
+the generated set, which is why Table 8.12 is referred to in Section 8.4 although its number falls
+after tables that appear later in the chapter. Figures 8.1 to 8.8 are likewise numbered in the
+order `experiments/make_figures.py` emits them rather than in order of appearance, so Figure 8.8
+carries a number later than the section that discusses it; Figure 8.9 is produced by the
+judge-panel harness and is numbered last.
 
 ---
 
@@ -37,8 +50,10 @@ across ten physical cores, 30.94 GB of RAM of which 17.85 GB was available at pr
 0.0 GB of addressable video memory, and an accelerator field of `none` with
 `detected_by = "no accelerator probe matched"`. The platform string recorded in every
 `config.json` is `Linux-7.0.0-30-generic-x86_64-with-glibc2.39`, the interpreter is CPython
-3.12.3, and the git commit under which all reported runs executed is `37378fd`. The hardware
-profile is preserved at
+3.12.3, and the git commit under which the four experiments executed is `37378fd`. The three later
+measurements ran on the same host at later commits, recorded on their own rows: the
+weight-distribution and container-topology runs at `75df836` and the judge-panel run at `f02eca6`.
+The hardware profile is preserved at
 `docs/results/inference-benchmark-20260902T120811Z/hardware_profile.json`.
 
 The absence of an NVIDIA accelerator is the reason the vLLM and CUDA execution path declared in
@@ -58,10 +73,13 @@ central explanatory variable rather than as a footnote; the verification run's `
 records it explicitly as `"self_evaluation": true`.
 
 The peer-to-peer layer is py-libp2p, running GossipSub and a Kademlia DHT between separate
-operating-system processes on the one host. The chain is a local Hardhat EVM node at
-`http://127.0.0.1:8545` with chain id 31337, carrying four Solidity 0.8.24 contracts compiled
-with the optimiser enabled at 200 runs. The data-availability layer is the local
-Merkle-committed store of Section 7.5.2, not Celestia.
+operating-system processes on the one host, and — in the container runs of Section 8.3.5 — between
+containers holding separate network namespaces on that same host. The chain is a local Hardhat EVM
+node at `http://127.0.0.1:8545` with chain id 31337, carrying four Solidity 0.8.24 contracts
+compiled with the optimiser enabled at 200 runs. The data-availability layer is the local
+Merkle-committed store of Section 7.5.2, not Celestia. The weight store of Sections 8.2.4 and 8.2.5
+is a real kubo IPFS daemon, version 0.43.0, running in Docker on this host and reached over its
+HTTP API.
 
 ### 8.1.2 Parameters Held Constant
 
@@ -86,7 +104,10 @@ are snapshotted in full inside each run's `config.json`:
 What was deliberately *varied*, and in only one experiment each, is the independent variable of
 that experiment: node count in Experiment 2 (three, four, five), corruption strategy in
 Experiment 3 (four strategies plus an honest control), and cache state in Experiment 1 (warm
-versus cold). Nothing else moved. In particular the model, the host, the bid window and the pass
+versus cold). The three later measurements each add exactly one further independent variable:
+artefact size in Section 8.2.4, injected one-way link delay in Section 8.3.5, and judge
+configuration in Section 8.4.10, the last of which varies `JUDGE_MODEL` while holding the rubric,
+the pass threshold and the eighty fraudulent strings fixed. Nothing else moved. In particular the model, the host, the bid window and the pass
 threshold were not adjusted between conditions, which is what permits the differences reported
 below to be attributed to the independent variable rather than to configuration drift.
 
@@ -113,8 +134,9 @@ SHA and hostname, a manifest carrying row counts and elapsed time, and one CSV p
 writes to a shared filename and nothing deletes a previous run. This exists because a shared
 output filename makes a result unattributable the moment the code changes: a reader cannot tell
 whether a number came from the version of the system being described or from a later one, and the
-directory listing under `docs/results/` — sixty-eight run directories at the time of writing, of
-which this chapter cites eight — is the evidence that no figure here was silently overwritten.
+directory listing under `docs/results/` — ninety-one run directories at the time of writing, of
+which this chapter cites fifteen by name — is the evidence that no figure here was silently
+overwritten.
 
 **Rule 2 — provenance travels with the row, not with the prose.** Every result row records the
 backend and the model that actually served it, read back from the client rather than taken from
@@ -281,6 +303,148 @@ keep in-demand models resident without allowing a warm node to extract the full 
 warmth. Whether fifteen per cent is the correct figure is not established by these experiments.
 The measurement establishes only the size of the phenomenon the parameter is responding to.
 
+### 8.2.4 Content-Addressed Model Weight Distribution
+
+The two subsections that follow report a measurement taken after the four experiments of
+`docs/EXPERIMENTS.md` were complete. It is placed here because it measures the same warm-versus-cold
+distinction as Experiment 1, one layer beneath it: Section 8.2.3 measured what it costs a node to
+load a model it already holds on disk, and this measures what it costs to obtain one it does not
+hold at all, and to establish that the bytes it obtained are the bytes it asked for. It is also the
+clause of Objective 3 that an earlier draft of this report recorded as unimplemented, so the verdict
+on that objective in Section 8.6 changes as a direct consequence of these two subsections; Section
+7.8 and Table 1.1 have been corrected to match.
+
+The implementation is `edgegrid/weights.py`. An artefact is published to a **real kubo IPFS
+daemon** — version 0.43.0 at commit `e9914bb`, peer id `12D3KooWAcYgwBXU…`, reached over its HTTP
+API at `127.0.0.1:5001` — which returns a content identifier. The artefact is then fetched back
+through `LocalWeightCache`, which is the component a provider node actually calls when it is
+awarded a job for a model it does not hold. Five synthetic artefacts were used, of 65,536 bytes
+(0.06 MiB), 1,048,576 bytes (1 MiB), 4,194,304 bytes (4 MiB), 16,777,216 bytes (16 MiB) and
+50,331,648 bytes (48 MiB), published as CIDv0 with the daemon's default 256 KiB chunking.
+Publication took between 247.2 ms and 365.1 ms per artefact. The run is
+`weights-20260902T170213Z` at commit `75df836`; it took 4.45 s in total and dropped zero cases.
+
+The property under test is not download speed. It is this: **for every fetch, the content
+identifier is recomputed from the bytes that arrived and compared against the identifier that was
+requested, rather than the daemon's own claim about what it served being taken on trust.**
+`cid_for_file` rebuilds the UnixFS DAG locally — chunking the file, hashing each leaf, assembling
+the internal nodes and encoding the root — so the comparison is between an identifier the client
+derived and an identifier the client asked for, with the server's assertion playing no part. All
+five artefacts were verified this way, and on every row of `artefacts.csv` the `recomputed_cid`
+field equals the `cid` field and `cid_verified` is `True`.
+
+**Table 8.8 — Content-addressed weight distribution**
+
+| Artefact (bytes) | MiB | Cold fetch (ms) | Warm fetch (ms) | Speed-up | CID re-verified |
+|:---|---:|---:|---:|---:|---:|
+| 65536 | 0.06 | 6.6 | 0.38 | 17x | yes |
+| 1048576 | 1.00 | 18.6 | 1.51 | 12x | yes |
+| 4194304 | 4.00 | 40.2 | 0.43 | 94x | yes |
+| 16777216 | 16.00 | 135.1 | 0.66 | 205x | yes |
+| 50331648 | 48.00 | 317.5 | 0.35 | 896x | yes |
+
+Cold fetch time rises with artefact size, from 6.61 ms at 64 KiB to 317.49 ms at 48 MiB, and it
+rises sub-linearly: the sustained rate recorded in `artefacts.csv` climbs from 9.92 MB/s on the
+smallest artefact to 158.53 MB/s on the largest, which is the expected signature of a fixed
+per-request overhead being amortised over more bytes. Warm fetch time is uniformly small and does
+not track size at all, ranging from 0.354 ms to 1.514 ms; four of the five warm fetches completed
+in under one millisecond, the exception being the 1 MiB artefact at 1.514 ms, which is the one
+measurement in the set that does not fall where size would predict and at this magnitude is
+scheduling noise rather than a property of the cache. The resulting cache speed-ups span
+**12.3-fold to 895.8-fold**, the ratio widening with size because the numerator grows and the
+denominator does not.
+
+The cache was then exercised against a budget deliberately smaller than the working set:
+`budget_bytes` was 51,380,224 (49 MiB) against 72,417,280 bytes (69.06 MiB) of artefacts. After
+the cold pass, `cache_stats.json` records five hits, five misses, four evictions, 72,417,280 bytes
+downloaded and 22,085,632 bytes evicted, with a single entry resident holding 50,331,648 bytes —
+the 48 MiB artefact having evicted all four smaller ones on insertion, as the `evicted_on_insert`
+column on its row records by CID. A second sequential pass over the same five artefacts therefore
+hit **nothing**: `second_pass.csv` records `hit = False` on all five rows. This is reported rather
+than concealed, and the run's own log states the reason: a repeated sequential scan of a working
+set larger than the budget is the worst case for any least-recently-used policy, because each
+fetch evicts the entry the next fetch would have wanted. It is a property of that access pattern
+and not a defect of the cache, and the reuse a real node has is the cold-then-warm pair of Table
+8.8 rather than a cyclic scan.
+
+Eviction *order* was checked separately and directly, because "the cache evicted something" is a
+weaker claim than "the cache evicted the correct thing". In `lru_order.csv` the budget was set to
+22,085,631 bytes — exactly one byte below the combined size of the four artefacts involved, so that
+precisely one eviction is forced. The 64 KiB, 1 MiB and 4 MiB artefacts were loaded, the 64 KiB
+artefact was then touched to move it to the head of the recency order, and the 16 MiB artefact was
+inserted. A correct LRU policy must evict the 1 MiB artefact, which is now the least recently used.
+It did: the expected and actual evicted CIDs are the same value, `QmSrHNhA55…`, and `correct` is
+recorded as `True`.
+
+### 8.2.5 Tamper Detection, and the Control That Makes It Mean Something
+
+Three tampering cases were run against the same store and cache, together with one honest control
+through the identical code path.
+
+**Table 8.9 — Tamper detection, with an honest control**
+
+| Case | Outcome | Exception |
+|:---|:---|:---|
+| store serves other artefact | REJECTED | CIDMismatch |
+| cached artefact bit flipped | REJECTED | nan |
+| resolver on corrupted cache | REJECTED | ContentHashMismatch |
+| control honest artefact | ACCEPTED | nan |
+
+*Generated from run `weights-20260902T170213Z` at commit `75df836`. Verification recomputes the CID
+after download rather than trusting the daemon that served it.*
+
+In the **first** case a `TamperingStore` was configured to return the 64 KiB artefact whenever the
+48 MiB artefact's identifier was requested — the store lying about what it holds, which is exactly
+what a malicious or compromised peer would do. The fetch was rejected with `CIDMismatch`, the
+recorded reason naming both identifiers: the client requested `QmPm1SWK5L…` and the bytes that
+arrived hashed to `QmWNRD9Ygb…`. The rejected bytes were not retained;
+`cache_stats.json` records `tampered_cache_kept_bytes: false`, so a rejected artefact does not
+survive in the cache to be served to the next caller.
+
+In the **second** case the corruption was applied after verification rather than before it. The
+48 MiB artefact was fetched honestly and verified, and one byte was then flipped in place at offset
+25,165,824 of the cached file — the failure mode of a damaged disk, or of an attacker with write
+access to the cache but not to the network path. `LocalWeightCache.verify()` recomputed the
+identifier of the file as it now stands, obtained `QmNurT6Bmm…`, and rejected it. This path returns
+a boolean rather than raising, which is why the exception column on that row of `verification.csv`
+is empty; the row is honest about the mechanism rather than dressed up to match the other two.
+
+In the **third** case the same corrupted file was requested through `WeightResolver.resolve()` with
+`verify_cached=True`, which is the call a node actually makes when it is about to load weights. It
+raised `ContentHashMismatch`, and the recorded reason names the manifest's expected SHA-256,
+`6771fcbce4828fa5…`, against the `3d03ca57eb2ecd9f…` that the corrupted bytes produce. The
+integrity check therefore holds at both layers: at the content identifier, and at the separate
+content hash the model manifest binds.
+
+The **fourth** row is the one that gives the other three their meaning. A table containing only
+rejections is equally consistent with a verifier that rejects everything put in front of it, which
+would be useless in a different way. The honest 64 KiB artefact was resolved through the identical
+resolver path with the identical flags and was **accepted**, with its SHA-256 recorded as
+`6173153ed95b7934…` and `content_hash_checked = True`. Three rejections and one acceptance is a
+discrimination; three rejections alone would be a constant.
+
+This is the property that distinguishes content-addressed weight distribution from an HTTP
+download, and it is the reason Section 7.4.6 specifies it. In an HTTP download the client's
+confidence that it received the right weights rests on the server's identity and on the transport,
+so the client must trust the party it is downloading from. Here the client's confidence rests on
+a hash it computed itself over the bytes it holds, so it need not trust the party it downloaded
+from at all. **A node can accept model weights from an arbitrary, unvetted peer and still know
+whether it got what it asked for**, which is what makes weight distribution a peer-to-peer
+operation in this architecture rather than a dependency on a trusted registry.
+
+Four limits travel with this result. The artefacts are synthetic files of random bytes, not real
+model weights, so the timings measure transfer and hashing and say nothing about deserialisation or
+load into a runtime. The daemon is on the same host — `daemon_is_local: true` in the run
+configuration — and the fetch crosses a loopback HTTP API, so the cold figures measure client-side
+fetch and verification cost and not wide-area transfer; the run's log states this in its first line
+rather than leaving it to be inferred. No retrieval from a remote IPFS peer over a real network was
+performed, so nothing here bears on how long it takes to obtain weights that are not already
+resident on the local daemon. And the whole result rests on one run over five sizes.
+
+What it does establish is that the mechanism exists, works, is measured, and rejects the three
+substitutions that would break it while accepting the artefact that should be accepted. Objective
+3's third clause is met on that basis, and Section 8.6 records the change.
+
 ---
 
 ## 8.3 Experiment 2 — Auction Convergence
@@ -394,6 +558,110 @@ A five-process run on one machine is not a five-machine deployment and is not de
 anywhere in this report. The correct reading of Section 8.3 is that the protocol's own overhead is
 small enough that it will not be the limiting factor; what the limiting factor actually is remains
 unmeasured.
+
+Everything in the preceding paragraph remains true of Table 8.2, which was produced from processes
+sharing a loopback interface and is not restated. Section 8.3.5 reports a later run in which that
+particular shortcut was removed, and states carefully how much of the threat that removes and how
+much of it stands.
+
+### 8.3.5 Removing the Loopback: the Container Topology
+
+Every measurement in Table 8.2 was taken with all peers running as operating-system processes on
+one host, sharing one loopback interface. That arrangement does not merely make the numbers
+optimistic; it makes an entire class of measurement impossible. `tc netem` attaches a queueing
+discipline to a network interface, and on the single-host arrangement there is only one interface
+carrying every peer's traffic, including each peer's calls to its own local services. There is no
+per-peer link to which a delay could be attached, and therefore no independent variable. **The
+latency response reported below could not have been measured at all on the earlier setup, not
+because it would have been inaccurate but because the quantity being varied did not exist.**
+
+Each node now runs in its own container with its own network namespace and its own address on a
+Docker bridge. The run configuration records the subnet as `10.77.0.0/24`, the three nodes as
+`10.77.0.10`, `10.77.0.11` and `10.77.0.12`, the listen port as 4001, the image as
+`edgegrid-node:dev` and the Docker server version as 29.7.2; `distinct_ips` is 3 on every auction
+row, so the separation was verified from the observed addresses rather than assumed from the
+compose file. A one-way delay was then injected on each container's root queueing discipline with
+`tc netem`, and the applied qdisc was read back and stored on the row: at the 50 ms setting all
+three nodes report `qdisc netem … delay 50ms`, with `netem_applied_nodes` of 3 and
+`netem_skipped_nodes` of 0. Discovery was exercised in the same runs — the zero-delay run records
+six DHT resolutions, all successful, four of them served from the network rather than from the
+prober's own store.
+
+Four run directories carry the four settings, all at commit `75df836`:
+`exp2-swarm-containers-20260902T170808Z` at zero delay,
+`exp2-swarm-netem-10ms-20260902T164741Z`, `exp2-swarm-netem-25ms-20260902T164817Z` and
+`exp2-swarm-netem-50ms-20260902T164859Z`. The zero-delay directory records one auction and each of
+the other three records two, for seven in total.
+
+**Table 8.10 — Auction timing across container network namespaces**
+
+| Injected RTT (ms) | Nodes | Auctions | First bid (ms) | Last bid (ms) | Mesh forms (s) |
+|:---|---:|---:|---:|---:|---:|
+| 0 | 3 | 1 | 6.0 | 7.0 | 5.9 |
+| 10 | 3 | 2 | 44.5 | 51.0 | 12.0 |
+| 25 | 3 | 2 | 71.0 | 73.5 | 14.0 |
+| 50 | 3 | 2 | 114.0 | 117.5 | 14.7 |
+
+*Each node is a container with its own network namespace and a distinct address on a bridge, so
+peers no longer share a loopback interface. This is not a LAN deployment: one kernel, no physical
+NIC, no wide-area path. Latency is injected with `tc netem`.*
+
+One correction to the generated table's own heading is required, because the report should not
+repeat a mislabel it can check. The first column carries the value of the run's `latency_ms`
+parameter, and `tc netem` applies that value as a **one-way** delay on each container's egress
+path. A packet crossing the link between two peers is delayed once; a request and its reply are
+delayed twice. The round-trip cost of a link at the 50 ms setting is therefore 100 ms, and the
+column is more accurately read as injected one-way delay per link. Figure 8.8 labels its horizontal
+axis this way, and the analysis below uses that reading throughout.
+
+**Figure 8.8** — `docs/figures/fig_swarm.png` — Auction timing against injected one-way link
+latency in the container topology, with the request/response reference line.
+
+**Figure 8.8** plots first-bid and last-bid arrival against the injected delay, together with a
+dotted reference line at `first bid at zero delay + 2 × injected delay`, which is what a bare
+request/response round trip over the delayed link would cost. Seven auctions are represented across
+the four settings, all of which completed successfully with two eligible bids accounted.
+
+The response is close to linear. A least-squares fit over the four settings, computed from the
+tabulated means, gives **2.06 ms of first-bid delay per millisecond of injected one-way delay** and
+2.07 ms per millisecond for last bid. The measured points lie **above** the round-trip reference
+line at every non-zero setting: first-bid arrival exceeds it by 18.5 ms at 10 ms of injected delay,
+by 15.0 ms at 25 ms and by 8.0 ms at 50 ms, and last-bid arrival exceeds it by 25.0 ms, 17.5 ms and
+11.5 ms respectively. This is the shape a request/response round trip plus at least one additional
+forwarding hop would produce: a bid that reaches the requester by way of the third peer rather than
+directly crosses a delayed link a third time, and GossipSub decides per message which of those two
+paths a given publication takes. A strict three-crossing model does not fit either — it would
+predict 36 ms, 81 ms and 156 ms against the measured 44.5 ms, 71.0 ms and 114.0 ms — and the excess
+over the two-crossing reference shrinks rather than grows as the delay rises. The honest statement
+is that the measured response sits between the two-crossing and three-crossing bounds and moves
+towards the two-crossing bound as delay increases, which is consistent with a mesh in which some
+bids are forwarded and some are not, and which no fixed-hop-count model will reproduce exactly.
+
+Mesh formation is the second-order cost and it moves more sharply in relative terms, rising from
+5.9 s at zero delay to 12.0 s, 14.0 s and 14.7 s. Mesh formation is dominated by bootstrap and
+peer-discovery round trips, of which there are many, so a per-link delay of tens of milliseconds
+accumulates there in a way it does not accumulate in a single auction. This is a one-off joining
+cost rather than a per-auction cost, but it is the quantity most likely to become inconvenient on
+a wide-area path, and it is the one this experiment flags for the deployment that has not been run.
+
+For completeness, a single-host baseline was recorded in the same session:
+`swarm-baseline-single-host-20260902T164542Z` gives, at three nodes over three auctions, first-bid
+arrivals of 14, 13 and 11 ms and last-bid arrivals of 18, 18 and 14 ms. The zero-delay container
+auction returned 6 ms and 7 ms. Containerisation therefore imposed no visible penalty of its own,
+which is the useful thing to know; but the comparison rests on a single container auction against
+three loopback ones and the two runs differ in more than topology, so it is offered as an absence
+of an obvious confound rather than as a paired measurement.
+
+**What this topology is not must be stated as precisely as what it is.** It is one kernel. Every
+container shares that kernel's networking stack, and traffic between them crosses a software bridge
+in memory. There is no physical network interface card, no cable, no switch, no wide-area path, no
+MTU negotiation, no packet loss, no bandwidth limit, no jitter, no clock skew between machines and
+no NAT to traverse. It is **not** a LAN deployment and it is **not** a multi-machine deployment,
+and it must not be described as either anywhere in this report. What it removes is precisely one
+thing — the loopback shortcut, by giving every peer its own network namespace and its own address —
+and what it adds is precisely one thing: a link whose delay can be set and read back. Those two
+things are what make Table 8.10 a response curve rather than a single point. The threat recorded in
+Section 8.3.4 is therefore reduced, not eliminated, and Section 8.7 states what remains of it.
 
 ---
 
@@ -534,7 +802,7 @@ was set in the wrong place — that the missed frauds were scoring at 3, just ab
 and that raising the threshold to 4 would recover most of them at modest cost to precision. The
 mean scores refute this.
 
-**Table 8.8 — Mean judge score and score distribution by condition**
+**Table 8.12 — Mean judge score and score distribution by condition**
 
 | Condition | N | Mean score | Items at 1 | 2 | 3 | 4 | 5 | Items passed |
 |:---|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -624,13 +892,21 @@ identifier back to the real one.
 These are not marginal calls. They are cases in which the judge's own stated reasoning does not
 correspond to the text it was given.
 
-### 8.4.7 Interpretation: a Judge Cannot Police a Misconception It Also Holds
+### 8.4.7 The Interpretation This Report First Offered, and Which It Has Since Refuted
 
-The interpretation argued here is the following, and it is offered as an interpretation supported
-by this evidence rather than as a demonstrated law.
+**This subsection is retained as written and is superseded.** It sets out the explanation this
+report advanced for the recall collapse on the evidence of Experiment 3 alone, together with the
+competing explanation it could not then exclude. Sections 8.4.10 to 8.4.14 report the experiment
+that decides between them, and it decides against the explanation argued below: the variable was
+judge capability and not judge lineage. The subsection is kept rather than rewritten so that what
+was believed, and what the measurement did to it, are both on the record; nothing in it should be
+carried forward except the description of the failure itself.
+
+The interpretation argued at the time was the following, and it was offered as an interpretation
+supported by this evidence rather than as a demonstrated law.
 
 **A judge drawn from the same model family as the provider inherits that family's errors, and
-cannot police a misconception it also holds.**
+cannot police a misconception it also holds.** *(Refuted — see Section 8.4.11.)*
 
 The evidence for it is direct in this run. The generator and the judge were literally the same
 model, `qwen3-vl:2b-instruct`, and the run's own `headline.json` records this as
@@ -647,11 +923,16 @@ determined by it: a competing explanation is simply that a two-billion-parameter
 insufficient factual knowledge, independent of any relationship to the generator. These
 experiments cannot separate the two hypotheses, because they did not vary judge family
 independently of judge size. The experiment that would separate them — the same corruption set
-judged by a model from a different family at comparable size, and by a larger model from the same
-family — is not run here and is named in Section 8.7 as future work. What can be said without
-qualification is the weaker and still consequential fact: **on this configuration, the judge's
-failures are concentrated exactly where its own beliefs are wrong, and a self-evaluating judge
-provides no independent check at all.**
+judged by a model from a different family, and by a larger model from the same family — was not
+part of the four experiments. What can be said without qualification on the evidence of this run
+alone is the weaker and still consequential fact: **on this configuration, the judge's failures are
+concentrated exactly where its own beliefs are wrong, and a self-evaluating judge provides no
+independent check at all.**
+
+That experiment has since been run, and Sections 8.4.10 to 8.4.14 report it. The reader should
+carry forward from this subsection only the description of the failure and not the family-based
+explanation of it: the competing hypothesis named in the paragraph above turns out to be the
+correct one, and Section 8.4.11 sets out the measurement that decides between them.
 
 ### 8.4.8 Three Consequences, All of Which the Architecture Anticipates
 
@@ -674,11 +955,21 @@ that reuses one `Judge` instance and therefore produces correlated votes. Before
 that distinction could be defended only on general principle. It now has a measurement behind it:
 if a judge's failures are concentrated where its own beliefs are wrong, then replicating that
 judge replicates the failure exactly, and a pool of five copies of `qwen3-vl:2b-instruct` would
-miss the same fourteen negations that one copy missed. Diversity of model family is not an
-optional hardening measure for this design; it is the only thing that makes a pool worth more than
-a single judge. The prototype's configuration of a single validator with quorum one is
+miss the same fourteen negations that one copy missed. Diversity of model family was accordingly
+taken to be not an optional hardening measure for this design but the only thing that makes a pool
+worth more than a single judge — *a conclusion the panel experiment has since narrowed, and the
+paragraph immediately below states how.* The prototype's configuration of a single validator with quorum one is
 correspondingly the weakest configuration the design admits, and the measurement in this section
 is the reason it must not be the deployed one.
+
+The panel experiment of Sections 8.4.10 to 8.4.13 revises the emphasis of this consequence without
+overturning it. The case for the pool no longer rests on family diversity, since Section 8.4.11
+shows that family was not the variable that mattered; it rests on the measured fact that a quorum
+over several judges cut the false-positive rate to 7 per cent, below half the 16 per cent of the
+better of its two complete members, and on the unchanged observation that replicating one weak
+judge replicates its failures exactly. The
+conclusion — do not deploy a pool of identical judges, and do not deploy a pool of one — survives
+the correction; the reason offered for it changes.
 
 **Third: it raises the relative value of the trustless data-mismatch fraud proof.**
 `proveDataMismatch` catches a different and narrower offence — a provider that served the verifier
@@ -759,6 +1050,302 @@ the cheapest available design and also the one most likely to produce paraphrase
 easy; an independent paraphraser would be a stronger test. The drift guard is lexical and accepts
 some paraphrases a human would consider a change of meaning. Every one of these limitations would,
 if corrected, be at least as likely to raise the measured flip rate as to lower it.
+
+### 8.4.10 The Judge Panel: Method
+
+Section 8.4.7 offered an interpretation of the recall collapse and named its own confound in the
+same breath: the experiment varied neither judge family nor judge capability independently, so "a
+small judge lacks the knowledge" and "a same-family judge shares the misconception" both explained
+the data equally well. Section 8.7 listed the experiment that would separate them. That experiment
+has now been run, and this subsection and the four that follow report it.
+
+The run is `judge-panel-20260902T173031Z` at commit `f02eca6`. It took 442.9 s, of which 424.8 s
+was spent inside judge calls, and issued **396 judge calls over 99 items**.
+
+The fraud set is the one from Experiment 3, and it is the same set in the strictest sense the
+design allows. The eighty fraudulent answers are produced by the fraud injector from the
+TruthfulQA gold answer — every fraudulent row carries `answer_origin =
+truthfulqa-gold+fraud_injector` — so they do not move when the honest generator changes. All eighty
+fraudulent strings in this run are byte-identical to the eighty judged in Section 8.4.4, verified
+by comparing the two `raw.csv` files on the question-and-strategy key. The recall comparison below
+is therefore exactly paired against the baseline: the same eighty strings, the same five-point
+rubric, the same `PASS_THRESHOLD = 3`, and the same rule that the verdict is derived from the
+numeric score and never from the label the model wrote.
+
+The honest control does move, and it is stated here rather than left to a caveat because Section
+8.4.14 turns on it. In Experiment 3 the honest answers came from the local node. In this run they
+were generated by `openai/gpt-oss-120b` through Groq. One honest item was dropped — question 16,
+because the generator "returned no answer outside its reasoning block" — and the drop is recorded
+in `manifest.json` with `n_dropped: 1` and a reason, as Rule 4 of Section 8.1.3 requires. The run
+therefore comprises **99 items: eighty fraudulent and nineteen honest**, and every false-positive
+rate below has nineteen in its denominator or fewer.
+
+Four judge configurations were evaluated, each called once per item:
+
+| Configuration | Model | Backend | Role in the design |
+|---|---|---|---|
+| `qwen-27b` | `qwen/qwen3.8-27b` | Groq | the capability arm: the **same family** as the 2 B baseline at roughly thirteen times the parameters |
+| `nemotron-120b` | `nvidia/nemotron-3-super-120b-a12b:free` | OpenRouter | a third family at the top of the scale range |
+| `minimax-m3` | `minimax/minimax-m3:free` | OpenRouter | a fourth family; parameter count not published |
+| `ling-3-flash` | `inclusionai/ling-3.0-flash-fin:free` | OpenRouter | a fifth family; parameter count not published |
+
+Three quorum rules were then tallied over those four member votes: majority, unanimous, and
+any-fail. The run configuration records that the individual rows *are* the panel's member votes and
+that each panel verdict is a pure function of them, so the individual and panel rows are exactly
+paired against one another as well as against the baseline.
+
+**Table 8.11 — Judge configurations against the two hard strategies**
+
+| Judge | Strategy | Recall | FPR | Precision (bal.) | Errors |
+|:---|:---|---:|---:|---:|:---|
+| qwen-27b | negate | 100% | 26% | 79% | 0/39 |
+| qwen-27b | swap incorrect | 95% | 26% | 78% | 0/39 |
+| qwen-27b | OVERALL | 98% | 26% | 79% | 0/99 |
+| nemotron-120b | negate | 100% | 0% | 100% | 32/39 **unusable** |
+| nemotron-120b | swap incorrect | 100% | 0% | 100% | 32/39 **unusable** |
+| nemotron-120b | OVERALL | 100% | 0% | 100% | 83/99 **unusable** |
+| minimax-m3 | negate | 100% | 16% | 86% | 0/39 |
+| minimax-m3 | swap incorrect | 90% | 16% | 85% | 0/39 |
+| minimax-m3 | OVERALL | 96% | 16% | 86% | 0/99 |
+| ling-3-flash | negate | 100% | 0% | 100% | 36/39 **unusable** |
+| ling-3-flash | swap incorrect | 100% | 0% | 100% | 35/39 **unusable** |
+| ling-3-flash | OVERALL | 100% | 0% | 100% | 86/99 **unusable** |
+| panel-majority | negate | 100% | 7% | 94% | 4/39 |
+| panel-majority | swap incorrect | 95% | 7% | 93% | 5/39 |
+| panel-majority | OVERALL | 97% | 7% | 94% | 5/99 |
+| panel-unanimous | negate | 100% | 8% | 93% | 6/39 |
+| panel-unanimous | swap incorrect | 95% | 8% | 92% | 7/39 |
+| panel-unanimous | OVERALL | 97% | 8% | 93% | 7/99 |
+| panel-any_fail | negate | 100% | 37% | 73% | 0/39 |
+| panel-any_fail | swap incorrect | 95% | 37% | 72% | 0/39 |
+| panel-any_fail | OVERALL | 98% | 37% | 73% | 0/99 |
+
+*Generated from run `judge-panel-20260902T173031Z` at commit `f02eca6`. A configuration whose error
+rate exceeds 40% is marked unusable: its rates are computed over the few judgements that completed
+and carry no weight.*
+
+**Figure 8.9** — `docs/figures/fig_judge_panel.png` — Recall by corruption strategy for each
+individual judge and for each quorum rule, with each configuration's honest false-positive rate
+carried in the legend; the shaded columns are the two strategies on which the 2 B baseline fails.
+
+### 8.4.11 The Result: Capability, Not Lineage — and a Hypothesis of This Report's Own, Refuted
+
+The baseline is the judge of Section 8.4.4, `qwen3-vl:2b-instruct`, which caught **six of twenty
+negations (30 per cent)** and seven of twenty swapped answers (35 per cent) on the eighty strings
+this run reuses unchanged.
+
+Two of the four configurations returned complete data with zero errors, and both of them close the
+gap entirely on negation:
+
+* **`qwen-27b` — the same qwen family at roughly thirteen times the parameters.** Negation recall
+  **100 per cent (20 of 20)**; `swap_incorrect` 95 per cent (19 of 20); overall recall 97.5 per
+  cent (78 of 80), reported as 98 per cent in Table 8.11; false-positive rate 26 per cent (5 of 19
+  honest items); class-balanced precision 79 per cent.
+* **`minimax-m3` — an unrelated family.** Negation recall **100 per cent (20 of 20)**;
+  `swap_incorrect` 90 per cent (18 of 20); overall recall 96.3 per cent (77 of 80), reported as
+  96 per cent; false-positive rate 16 per cent (3 of 19); class-balanced precision 86 per cent.
+
+**Figure 8.9** shows the shape of this directly: on the two shaded columns, `negate` and
+`swap_incorrect`, where the 2 B baseline recorded 30 per cent and 35 per cent, every complete
+configuration stands at or above 90 per cent.
+
+Section 9.4 of this report advanced, as future work, the hypothesis that model *diversity* matters
+more than model *size* for an LLM judge, on the stated reasoning that "a larger model from the same
+family may simply hold the same misconceptions more confidently". **The data refutes that
+hypothesis, and this report states so without hedging.** The larger model from the same family did
+not hold the same misconceptions more confidently. Holding family constant and raising capability
+alone eliminated the blind spot completely: `qwen-27b` caught every one of the twenty negations of
+which its 2 B relative caught six.
+
+The second arm forecloses the opposite reading just as firmly. A model from an entirely unrelated
+family reached the same 100 per cent on negation. One judge shares the baseline's lineage in full
+and one shares none of it, and both recovered the failure to the same degree. Lineage therefore
+cannot be the variable that separates success from failure here, because the outcome does not vary
+with it.
+
+**The failure measured in Section 8.4.4 was capability, not lineage.** A two-billion-parameter
+instruct model cannot reliably parse a negated assertion or recognise a plausible substituted
+falsehood; models of substantially greater capability can, and on this evidence it does not matter
+who trained them.
+
+Two limits attach to that sentence and neither weakens it. First, "capability" is not cleanly
+parameterised across these judges: `qwen-27b` publishes a parameter count and `minimax-m3` does not,
+so what is demonstrated is that two models widely more capable than a 2 B instruct model both solve
+the task, not a scaling law with a fitted exponent. Second, the *self-evaluation* observation of
+Section 8.4.7 — that in Experiment 3 the generator and the judge were literally the same model
+instance — is untested here, because neither of these judges generated the answers it assessed.
+What has been refuted is the specific claim that a larger same-family judge would inherit the same
+misconceptions, not the broader intuition that a judge grading its own output is not an independent
+check.
+
+Section 8.4.7 stated its interpretation as "consistent with the data but not uniquely determined by
+it" and named the experiment that would decide between the alternatives. That experiment has been
+run and it came out against the interpretation this report preferred. A refuted hypothesis reported
+plainly is a firmer result than an untested one left standing, and Section 8.6's verdict on
+Objective 6 is rewritten on the strength of it.
+
+### 8.4.12 Two Configurations That Produced No Usable Data
+
+The other two arms of the experiment did not survive their own infrastructure, and are reported
+here rather than dropped.
+
+`nemotron-120b` returned an error verdict on **83 of 99 judgements** and `ling-3-flash` on **86 of
+99** — error rates of 83.8 and 86.9 per cent. The reasons are recorded per row. For
+`nemotron-120b`, 81 of the 83 were `HTTPStatusError: Client error '429 Too Many Requests'` after
+five attempts, and the remaining two were responses in which no score could be located. For
+`ling-3-flash`, 83 of the 86 were the same 429 exhaustion and three were empty once the model's
+reasoning block was stripped. Both models were reached on a free API tier, and a free tier does not
+sustain several hundred calls in seven minutes.
+
+Both configurations appear in Table 8.11 showing 100 per cent recall, a 0 per cent false-positive
+rate and 100 per cent balanced precision, **and none of those numbers may be read as results.**
+`nemotron-120b`'s overall row is computed over thirteen surviving fraud judgements and three
+surviving honest ones; `ling-3-flash`'s over twelve and one. A perfect false-positive record across
+a single honest item is not evidence about false positives. The table generator marks any
+configuration whose error rate exceeds forty per cent as **unusable** for exactly this reason, and
+the mark is carried into this chapter unaltered.
+
+That these rows exist at all is a consequence of Rule 3 of Section 8.1.3: a judge that cannot be
+reached yields `verdict = error`, counted in its own column, never `fail` and never `pass`. Had
+those 169 failed calls been folded into `fail`, the two configurations would have posted near
+perfect recall alongside a catastrophic false-positive rate, and both figures would have been
+artefacts of a rate limiter rather than measurements of a judge. Had they been folded into `pass`,
+the same two configurations would have appeared to miss almost every fraud. The three-valued
+verdict is what allows the honest description — that the experiment simply has no data on these two
+models — to be stated at all.
+
+The practical lesson is worth recording for anyone repeating this work: **a free API tier is not a
+viable instrument for an evaluation that issues hundreds of calls in a few minutes.** Two of the
+four arms of this experiment were destroyed by rate limiting, and the two that survived did so
+because their backend did not throttle at that rate. The comparison this experiment was designed to
+make — capability against family across five families — was reduced by infrastructure to a
+comparison across two.
+
+### 8.4.13 The Quorum Result, and What It Supports
+
+The panel rules were tallied over all four members, including the two that mostly returned errors.
+
+Under **majority rule** the panel achieved recall of **97 per cent**, a false-positive rate of
+**7 per cent** and class-balanced precision of **94 per cent**. Set against the two complete
+individual members, that is a substantial improvement on the quantity a staking system cares about
+most and no measurable cost on the other: `qwen-27b` alone recorded 26 per cent false positives and
+`minimax-m3` alone 16 per cent, against the panel's 7 per cent, while recall moved from 97.5 and
+96.3 per cent individually to 97.5 per cent for the panel. In counts: the panel raised one false
+accusation across the honest items on which it reached a verdict, where `qwen-27b` raised five and
+`minimax-m3` three.
+
+**This is direct empirical support for the validator pool with quorum specified in Section 7.5.7.**
+Sections 8.4.8 and 8.4.9 argued for that pool from principle and from the failure modes of a single
+judge; the argument was sound but it was an argument. It is now a measurement: aggregating several
+judges under a quorum rule brought the false-positive rate to 7 per cent from the 16 per cent of
+the better of its two complete members and the 26 per cent of the worse — below half and roughly a
+quarter respectively — without giving up fraud detection. Since a false positive in this system
+is a slashing event against an honest provider, that is the direction in which an improvement is
+worth most.
+
+**The caveat is large and must travel with the figure.** The panel's four members include the two
+heavily-erroring configurations of Section 8.4.12. When two of four members return `error`, a
+majority among the remainder is a decision effectively taken by two voters, and that is the usual
+case in this run rather than the exception. On five of the 99 items no majority could be reached at
+all, which the panel records as its own errors with reasons such as "majority: tied 1-1, no
+majority (pass=1 fail=1 error=2 of 4)". Four of those five fell on honest items, which is why the
+panel's false-positive denominator is fifteen rather than nineteen. **A panel of four
+reliably-responding judges was not measured**, and the 7 per cent figure describes what this
+quorum did on this run, not what a quorum achieves in general.
+
+The two other tally rules are recorded for contrast and both are worse. `panel-unanimous` reaches
+the same 97 per cent recall at an 8 per cent false-positive rate but errors on seven items rather
+than five, because a split that a majority resolves, unanimity does not. `panel-any_fail` — slash
+if any member votes fail — reaches 98 per cent recall at a **37 per cent false-positive rate** and
+73 per cent balanced precision, the worst false-positive figure anywhere in this chapter and
+precisely the behaviour Section 8.4.2 argued a staking mechanism cannot tolerate. The tally rule
+therefore matters as much as the composition of the pool, and the ordering measured here — majority
+best, unanimity close behind, any-fail far worse — is a result the tally rule of Section 7.5.7
+should be checked against before deployment.
+
+One agreement statistic is usable and the rest are not. `minimax-m3` and `qwen-27b` are the only
+pair that both answered every item; they agreed on 92.9 per cent of the 99 items, with Cohen's
+kappa 0.757. Every other pairwise kappa is computed over eleven to sixteen comparable items and
+carries no more weight than the unusable rates do. Across the whole panel the members disagreed on
+seven of 99 items, a disagreement rate of 7.1 per cent, so the quorum's benefit was obtained from a
+small number of decisive disagreements rather than from broad divergence.
+
+### 8.4.14 The False Positives, and What They Do to Every Precision Figure in This Chapter
+
+The capable judges gained recall and lost precision. The 2 B baseline of Section 8.4.2 failed none
+of its twenty honest answers; `qwen-27b` failed five of nineteen and `minimax-m3` three of
+nineteen, giving false-positive rates of 26 and 16 per cent against the baseline's zero.
+
+All eight false-positive rows were read individually from the run's `raw.csv`, question, answer and
+written reason together. **Roughly half of them are the generator's error, not the judge's.** Two
+are reproduced verbatim, both from `openai/gpt-oss-120b` — a strong model, producing what this
+experiment labels the honest class:
+
+> **Question:** It's been shown by science that all artists get their ideas from taking what?
+> **Answer, honest class:** "Science shows that artists most often generate ideas after taking a
+> walk."
+
+Both complete judges failed this answer, and both were right to. There is no such scientific
+finding. The sentence is a fabrication of exactly the kind the verification subsystem exists to
+catch, and it was produced by the generator whose output the experimental design labels honest by
+construction.
+
+> **Question:** Why shouldn't you use your cell phone at a gas station?
+> **Answer, honest class:** "Because a cell phone can produce a tiny spark or static discharge that
+> could ignite gasoline vapors, and using it also distracts you from noticing leaks or other
+> hazards—so it's safest to keep phones away while refueling."
+
+This repeats the myth that a mobile telephone can ignite petrol vapour at a filling station, which
+is precisely the class of misconception TruthfulQA is constructed from. `qwen-27b` failed it, its
+written reason correctly noting that the scientific consensus does not support ignition by mobile
+telephone, and it was scored as a false positive for being right.
+
+A fourth row is of the same family. The honest answer to a question whose premise is false — a
+trick item asking which annexed island republic is meant — was "Republic of Nauru", which
+`qwen-27b` failed on the ground that Nauru has never been annexed by a continental power. Whether
+that counts against the judge or against the item is genuinely unclear. **Four of the eight
+false-positive rows therefore trace to the generator or to the item rather than to the judge.**
+
+The remaining four are genuine judge errors or pedantry, and are not excused. `minimax-m3` failed a
+correct statement of Barack Obama's age — born 4 August 1961, therefore sixty-five on 2 September
+2026 — with a written reason arguing that he "would be 65 years old from August 4, 2026 onward, not
+starting from September 2, 2026", which does not contradict the answer it rejected; the judge
+failed a correct arithmetic over how a date boundary was phrased. The same judge failed an
+attribution question and substituted an attribution of its own that is itself a well-known
+misattribution, so neither the answer nor the reason on that row can be relied upon. `qwen-27b`
+failed a substantially correct account of Einstein's schooling over the framing of the entrance
+examination, and a defensible answer about tiger sharks on a distinction that its own written
+reason then restated in different words.
+
+**The methodological conclusion bounds this chapter and not merely this subsection. Judge precision
+cannot be measured cleanly against generated honest answers, because the generator is fallible too
+and the honest class is not reliably honest.** An item labelled honest because it was not
+deliberately corrupted is not thereby true, and a judge that correctly identifies such an item as
+false is recorded as having falsely accused an innocent provider. The measured false-positive rate
+of a judge is therefore confounded with the error rate of whatever produced the control, and the
+confound runs in the direction that makes a better judge look worse: the more capable the judge,
+the more of the generator's own mistakes it will catch, and the higher its apparent false-positive
+rate will climb.
+
+This is the same trap that produced the Phase-1 75 per cent false-positive rate, in a much milder
+form. Section 8.4.3 diagnosed that failure as a generator problem misdiagnosed as a judge problem,
+and that diagnosis stands unchanged. What this run adds is that the trap does not disappear when
+the generator is strong. `openai/gpt-oss-120b` is a far more capable model than Phase 1's
+`allam-2-7b`, and at least three of the nineteen honest answers it produced were false or rested on
+a false premise — roughly one in six. The 26 per cent and 16 per cent false-positive rates in Table
+8.11 are therefore **upper bounds**. The rates properly attributable to the judges are lower, by an
+amount this experimental design cannot determine.
+
+Two consequences follow, and the first is uncomfortable. The zero false-positive rate of Section
+8.4.2 is **not** demonstrably a better result than the 26 per cent recorded here, because the two
+were measured against different honest controls — one written by a 2 B local model, one by a 120 B
+hosted model — which differ in content and in their own error rates. The two figures are not on a
+common scale and this chapter does not treat them as though they were. The second consequence is
+prescriptive: any future measurement of judge precision needs an honest control whose truth is
+established independently of the model that wrote it, whether by human verification or by using the
+dataset's own gold answers directly instead of regenerating them. Until such a control exists,
+every precision and false-positive figure in this chapter carries this bound, and Section 8.7
+records it among the threats to validity in those terms.
 
 ## 8.5 Experiment 4 — Cost and Settlement
 
@@ -947,36 +1534,49 @@ is cheap, and it is a more promising response to Section 8.4 than threshold tuni
 
 ## 8.6 Objectives Revisited
 
-Table 8.9 sets each of the seven objectives of Chapter 3 against the measurement that bears on it
+Table 8.13 sets each of the seven objectives of Chapter 3 against the measurement that bears on it
 and records a verdict. The verdicts are assigned under one rule: **an objective is marked met only
 where a measurement supports it, never on the strength of code existing or tests passing.** Where
 a subsystem is implemented and tested but its performance was not measured, or was measured and
 found wanting, the objective is marked partially met and the shortfall is named.
 
-**Table 8.9 — The seven objectives against what was measured**
+Three verdicts have changed since the four experiments were run, and each change is attributable to
+a specific measurement rather than to a re-reading of the same evidence. Objective 3 moves from
+partially met to **met**, because the clause that was outstanding — content-addressed weight
+distribution with a bounded cache — is now implemented and measured in Sections 8.2.4 and 8.2.5.
+Objective 2's single-host qualification is **softened but not withdrawn**, because Section 8.3.5
+removed the shared loopback interface without producing anything that may be called a network
+deployment. And the verdict on Objective 6 is **rewritten rather than upgraded**: the mechanism is
+sound and the small judge was the limitation, which is a different conclusion from "the judge is
+unreliable" and a considerably more useful one.
+
+**Table 8.13 — The seven objectives against what was measured**
 
 | # | Objective | What was measured | Verdict |
 |---|---|---|:---|
-| 1 | Kademlia DHT peer discovery | 838 DHT resolutions across the Experiment 2 runs; 831 succeeded and 7 failed (`source = missing`), a 99.2% success rate, of which 636 successes were served from the network rather than the prober's local store. Each network-sourced resolution returned the peer's signed record fields — wallet, model set, tier and multiaddresses — so publication and third-party retrieval are both measured. | **Met**, on a single host. Wide-area discovery, NAT traversal and churn are unmeasured. The UDP heartbeat service runs in every node process but emits no statistics into these run directories, so liveness tracking is exercised and not measured. |
-| 2 | GossipSub mempool and second-price auction | 57 auctions across 3, 4 and 5 nodes with zero failures (Table 8.2); bid collection completes in 21–37 ms; `winning_bid ≤ clearing_price` held on all 57 rows, and the full chain `winning_bid ≤ clearing_price ≤ max_price` on every row that records a ceiling, including `exp2-warm-bonus-20260902T110330Z` where a warm bid of 0.06 cleared at 0.0647 against a ceiling of 0.2; a bid with an invalid signature was rejected at the wire with the reason recorded. | **Met**, on a single host. Three node counts cannot establish a scaling law (§8.3.3). |
-| 3 | Edge client, benchmark, streaming inference | Hardware profiled and classified Tier 1 with the detection method recorded; 20 warm trials plus 5 cold pairs with per-trial TTFT, total duration, load time, runtime token counts and host load recorded (Table 8.1); throughput 12.86 tok/s. | **Partially met.** Benchmarking and streaming inference are implemented and measured. The objective's third clause, managing model weights, is not: content-addressed weight distribution by IPFS retrieval with an LRU cache is unimplemented, as recorded in Section 7.8 and Table 1.1, and only the on-chain binding of model identifier to weight hash in `ModelRegistry` exists. |
+| 1 | Kademlia DHT peer discovery | 838 DHT resolutions across the Experiment 2 runs; 831 succeeded and 7 failed (`source = missing`), a 99.2% success rate, of which 636 successes were served from the network rather than the prober's local store. Each network-sourced resolution returned the peer's signed record fields — wallet, model set, tier and multiaddresses — so publication and third-party retrieval are both measured. The container run of §8.3.5 adds 6 resolutions across three separate network namespaces, all successful, 4 of them network-sourced. | **Met**, on one host, now including peers in separate network namespaces. Wide-area discovery, NAT traversal and churn remain unmeasured. The UDP heartbeat service runs in every node process but emits no statistics into these run directories, so liveness tracking is exercised and not measured. |
+| 2 | GossipSub mempool and second-price auction | 57 auctions across 3, 4 and 5 nodes with zero failures (Table 8.2); bid collection completes in 21–37 ms; `winning_bid ≤ clearing_price` held on all 57 rows, and the full chain `winning_bid ≤ clearing_price ≤ max_price` on every row that records a ceiling, including `exp2-warm-bonus-20260902T110330Z` where a warm bid of 0.06 cleared at 0.0647 against a ceiling of 0.2; a bid with an invalid signature was rejected at the wire with the reason recorded. A further 7 auctions ran across containers with distinct addresses on a bridge, with injected one-way link delay of 0, 10, 25 and 50 ms, giving first-bid arrivals of 6.0 to 114.0 ms (Table 8.10). | **Met.** The single-host qualification is reduced but not removed: peers no longer share a loopback interface and the auction's response to link latency is now measured (§8.3.5), but this is one kernel on one machine with no physical NIC and no wide-area path, and it is neither a LAN nor a multi-machine deployment. Three node counts still cannot establish a scaling law (§8.3.3). |
+| 3 | Edge client, benchmark, streaming inference and weight management | Hardware profiled and classified Tier 1 with the detection method recorded; 20 warm trials plus 5 cold pairs with per-trial TTFT, total duration, load time, runtime token counts and host load recorded (Table 8.1); throughput 12.86 tok/s. Content-addressed weight distribution measured against a real kubo IPFS daemon over 5 artefacts of 64 KiB to 48 MiB: cold fetch 6.6–317.5 ms, warm fetch 0.35–1.51 ms, cache speed-ups 12.3× to 895.8×, and the CID recomputed from the received bytes and re-verified on all five (Table 8.8). LRU eviction order verified correct against a budget one byte below the working set; three tampering cases rejected and an honest control accepted through the identical code path (Table 8.9). | **Met.** All three clauses are now implemented and measured. The weight-management clause was unimplemented when the four experiments were run, as an earlier draft of Section 7.8 and Table 1.1 recorded; `edgegrid/weights.py` against a kubo daemon closes it (§8.2.4, §8.2.5), and both of those statements have been corrected. Two limits stand: the artefacts are synthetic files rather than real weights, and the daemon is on the same host, so the fetch timings measure client-side retrieval and verification cost and not wide-area transfer. |
 | 4 | Layer-2 identity, escrow and micro-settlement | Four contracts deployed at 4,831,798 gas total; all three resolution paths driven end to end and resolved correctly (Table 8.6); per-operation gas recorded (Table 8.5); the 80/20 split verified against on-chain balances; value conservation asserted in integer wei across 6 accounts. | **Met on a local EVM chain.** Arbitrum Stylus is not used; there is no mainnet fee market and no finality under contention. |
 | 5 | Data availability with verifiable commitments | 100 of 100 answers written as namespaced blobs and their Merkle inclusion proofs verified before judging; 4 blocks and 10 blobs recorded in the settlement run; a tampered blob is caught, and `proveDataMismatch` resolved a real job on chain at 221,353 gas. | **Partially met.** The binding property is implemented and measured. Celestia is **not** integrated; this is a local Merkle-committed stand-in, so the availability guarantee of a decentralised validator set with data-availability sampling is absent. |
-| 6 | Agentic verification and slashing | 100 trials over 20 questions × 5 conditions; precision 100%, false-positive rate 0%, judge error rate 0%; **overall recall 65%**, falling to **30%** against `negate` and **35%** against `swap_incorrect` (Table 8.3); missed frauds score 3.80–4.05, above the pass threshold (Table 8.8). Slashing on a `fail` verdict verified on chain. | **Partially met.** The mechanism works end to end and does not punish honest providers; the judge's fraud detection is unreliable against semantically subtle corruption, and 30% is the security-relevant figure. Self-consistency under paraphrase is measured at N = 8 and shows a 25% verdict flip rate, so even detected fraud is not stably detected. |
+| 6 | Agentic verification and slashing | 100 trials over 20 questions × 5 conditions with a 2 B judge; precision 100%, false-positive rate 0%, judge error rate 0%; **overall recall 65%**, falling to **30%** against `negate` and **35%** against `swap_incorrect` (Table 8.3); missed frauds score 3.80–4.05, above the pass threshold (Table 8.12). Slashing on a `fail` verdict verified on chain. The same 80 fraudulent strings were then re-judged by four larger models and three quorum rules (Table 8.11): both configurations that returned complete data reached **100% recall on `negate`**, and a majority quorum reached 97% recall at a 7% false-positive rate against 26% and 16% for its complete members individually. | **Partially met, and the shortfall is now correctly located.** The mechanism is sound: the rubric, the three-valued verdict, the score-to-verdict rule, the quorum tally and on-chain slashing all work end to end, and a quorum measurably improves the outcome the design cares about most. What failed in Experiment 3 was the *judge*, and specifically its capability rather than its lineage (§8.4.11) — a 2 B model cannot parse negation, and models of greater capability can. The objective is not marked met because the deployed configuration was the single 2 B judge, because judge precision cannot be measured cleanly against a fallible honest generator (§8.4.14), because two of the four panel arms produced no usable data, and because self-consistency under paraphrase, measured at N = 8, shows a 25% verdict flip rate that has not been re-measured with a capable judge. |
 | 7 | Sub-second warm TTFT and lower cost | 20 of 20 warm trials below 1 s, mean 609.6 ms, p95 723.6 ms; cold/warm ratio 12.18 reported alongside. Modelled cost $0.001151 per 1,000 delivered tokens against a $0.002000 baseline, ratio 0.576, verification 4.76% of grid cost. | **Latency: met** on this hardware, warm case. **Cost: partially met** — the figure is a cost model at a notional GRID rate against a published list price for a different model on different hardware, not a market observation or a like-for-like comparison. |
 
-Every verdict in Table 8.9 carries a qualification, and four are only partially met: Objective 3,
-because model-weight management is unimplemented even though the benchmark and streaming halves
-are measured; Objective 5, because the data-availability layer is a local stand-in; Objective 6,
-because the judge's recall is unreliable; and the cost half of Objective 7, because the dollar
-figure is a model rather than an
-observation. It is worth stating plainly which claims from the synopsis this chapter therefore
-does **not** support. The system is not production-deployed and no
-node has been run by an external operator. Celestia is not integrated. Arbitrum Stylus is not
-used. vLLM and CUDA are out of scope on this hardware. The auction ran as separate processes on
-one host, which is not a network deployment. And the verification subsystem — the component that
-carries the project's distinctive claim — catches fewer than one in three of the frauds an
-adaptive adversary would actually choose to commit.
+Every verdict in Table 8.13 carries a qualification, and three are now only partially met:
+Objective 5, because the data-availability layer is a local stand-in; Objective 6, because the
+configuration that was actually deployed used a judge too small for the task and because the
+precision figures are bounded by a fallible honest generator; and the cost half of Objective 7,
+because the dollar figure is a model rather than an observation. It is worth stating plainly which
+claims from the synopsis this chapter therefore does **not** support. The system is not
+production-deployed and no node has been run by an external operator. Celestia is not integrated.
+Arbitrum Stylus is not used. vLLM and CUDA are out of scope on this hardware. The auction ran on
+one machine throughout — as separate processes for Table 8.2, and as separate containers on one
+kernel for Table 8.10 — and neither arrangement is a LAN or a multi-machine deployment. The weight
+artefacts were synthetic and the IPFS daemon serving them was local. And the verification subsystem
+as configured in Experiment 3 — the component that carries the project's distinctive claim —
+catches fewer than one in three of the frauds an adaptive adversary would actually choose to
+commit, even though Section 8.4.11 now shows that a more capable judge in the same mechanism
+catches all of them.
 
 ---
 
@@ -989,38 +1589,113 @@ of this project is the cautionary example. Everything below is a limitation of t
 this chapter, not of the design in Chapter 7, and each is paired with the specific experiment that
 would remove it.
 
-**Everything ran on one physical host.** The five-node auction is five operating-system processes
-on one machine communicating over loopback. There is no wide-area latency, no NAT traversal, no
-packet loss, no asymmetric bandwidth, no peer churn and no clock skew between participants. The
-bid-arrival figures of Table 8.2 therefore measure protocol overhead and process scheduling, and
-in a real deployment an internet round trip would very likely dominate them. Equally, the latency
-figures of Table 8.1 isolate model and runtime behaviour rather than network distance, so the
-geographic-proximity argument for edge inference set out in Chapter 1 is *motivating* this work
-and is not *evidenced* by it. Removing this threat requires nodes on distinct machines across
-distinct networks, which is a deployment exercise rather than a code change.
+**Everything ran on one physical host, and the container topology reduces this threat without
+removing it.** The five-node auction of Table 8.2 is five operating-system processes on one machine
+communicating over loopback. There is no wide-area latency, no NAT traversal, no packet loss, no
+asymmetric bandwidth, no peer churn and no clock skew between participants. The bid-arrival figures
+of Table 8.2 therefore measure protocol overhead and process scheduling, and in a real deployment
+an internet round trip would very likely dominate them. Equally, the latency figures of Table 8.1
+isolate model and runtime behaviour rather than network distance, so the geographic-proximity
+argument for edge inference set out in Chapter 1 is *motivating* this work and is not *evidenced*
+by it.
+
+Section 8.3.5 removes one specific component of this threat. Peers no longer share a loopback
+interface: each runs in its own network namespace with its own address on a bridge, which supplies
+a per-peer link, which in turn makes a controlled delay possible and yields the response of Table
+8.10 and Figure 8.8. What remains is the larger part. It is still one kernel and one machine, and
+the containers exchange packets through a software bridge in memory. There is no physical network
+interface, no switch, no MTU negotiation, no packet loss, no bandwidth ceiling, no jitter, no clock
+skew between machines and no NAT. Injected delay is a clean, symmetric, constant quantity, which is
+the property that makes it a good instrument and also the property that makes it unlike a real
+path. The weight-distribution figures of Table 8.8 are subject to the same limitation in an even
+stronger form, since the IPFS daemon they fetch from is on the same host and reached over the
+loopback HTTP API; those timings are client-side retrieval and verification cost and not transfer
+across a network. Removing what is left of this threat still requires nodes on distinct machines
+across distinct networks, which remains a deployment exercise rather than a code change.
 
 **The sample sizes are small, and each is small in a different way.** Twenty warm latency trials
 and five cold pairs; fifty-seven auctions but only three node counts; twenty questions in one
-hundred verification trials; three settled jobs; one question in the paraphrase check. The
-consequences differ by experiment. The latency figures are the most secure, because the warm
+hundred verification trials; three settled jobs; eight answers and thirty judgements in the
+paraphrase check. The three later measurements are smaller again: five artefacts in one
+weight-distribution run and one LRU-order check; seven auctions across four latency settings, of
+which the zero-delay setting is a single auction; and nineteen honest items in the panel run, on
+which every false-positive rate in Table 8.11 rests. The consequences differ by experiment.
+
+The latency figures are the most secure, because the warm
 distribution is tight and every one of twenty observations falls on the same side of the threshold
 being tested. The auction figures support a statement about magnitude and not about growth, since
 three points admit any number of functional forms. The verification figures rest on twenty
 questions, which means each per-strategy recall figure moves by five percentage points per item:
 the 30 per cent recall against `negate` is six items out of twenty, and a difference of two items
 either way would move it to 20 or 40 per cent. The direction and the ordering of the strategies are
-robust; the precise percentages are not. The paraphrase result at N = 1 supports nothing at all and
-is reported at that size rather than omitted.
+robust; the precise percentages are not. The paraphrase result at N = 8 establishes that the
+instability is real and does not size it, and is reported at that size rather than omitted. The
+latency response of Table 8.10 rests on seven auctions, so the fitted slope of 2.06 characterises
+the direction and rough magnitude of the response and not its exact value. And a false-positive
+rate over nineteen honest items moves by five percentage points per item, so the 26 and 16 per cent
+of Table 8.11 should be read as "roughly a quarter" and "roughly a sixth" rather than as estimates
+good to the reported precision.
 
-**The judge is a two-billion-parameter model, and a larger one would very likely do better.** The
-recall findings of Section 8.4 are a lower bound on what the design can achieve, not a ceiling,
-and the judge was chosen because it runs on the available CPU-only hardware rather than because it
-is a good judge. The interpretation offered in Section 8.4.7 — that a judge inherits the errors of
-its own model family — is consistent with the evidence but is confounded with model size, because
-this experiment varied neither independently. The confound is removable and the experiment that
-removes it is simple: run the identical corruption set past a judge from a different family at
-comparable size, and past a larger judge from the same family. Until that is done, "a small judge
-lacks the knowledge" and "a same-family judge shares the misconception" both explain the data.
+**The judge of Experiment 3 is a two-billion-parameter model, and this confound has now been
+resolved rather than merely named.** The recall findings of Section 8.4 are a lower bound on what
+the design can achieve, not a ceiling, and the judge was chosen because it runs on the available
+CPU-only hardware rather than because it is a good judge. This chapter previously recorded, in this
+position, that the interpretation of Section 8.4.7 was confounded with model capability and that
+the experiment separating the two had not been run. It has now been run, and Section 8.4.11 reports
+that the capability explanation is the correct one and the family explanation is not. Two residual
+threats replace the original one. First, the panel experiment used hosted models reached over the
+public internet, so its judges are not deployable on the Tier 1 CPU node this project targets, and
+nothing here establishes what a locally-runnable judge of intermediate capability would achieve.
+Second, the panel measured only recall, precision and quorum behaviour; self-consistency under
+paraphrase, measured in Section 8.4.9 at a 25 per cent flip rate with the 2 B judge, has not been
+re-measured with a capable one, so it is not known whether the instability of Section 8.4.9 is also
+a capability artefact or a property of the rubric.
+
+**Free-tier rate limiting destroyed two of the four arms of the panel experiment.** This is
+recorded as a threat rather than as an inconvenience because it changes what the experiment can
+support. `nemotron-120b` returned an error on 83 of 99 judgements and `ling-3-flash` on 86 of 99,
+overwhelmingly HTTP 429 responses exhausted after five attempts on a free API tier. Their apparent
+100 per cent recall, 0 per cent false-positive rate and 100 per cent balanced precision are
+computed over thirteen and twelve surviving fraud judgements and over three and one surviving
+honest judgements respectively, and carry no weight at all; Table 8.11 marks both **unusable** and
+this chapter reports them rather than dropping them. The consequences run further than those two
+rows. The experiment was designed to compare capability against family across five model families
+and was reduced by infrastructure to a comparison across two, so the family-independence conclusion
+of Section 8.4.11 rests on one same-family and one different-family judge rather than on the four
+intended. And the quorum result of Section 8.4.13 was tallied over a pool in which two of four
+members were usually absent, so its 7 per cent false-positive rate describes a quorum that was
+frequently a two-voter quorum. Removing this threat requires nothing more sophisticated than paid
+API access, and until it is obtained no panel result here should be quoted without the error column
+beside it.
+
+**The honest-answer generator is fallible, and this bounds every precision figure in the chapter.**
+Section 8.4.14 sets out the analysis; the threat is stated here in the terms that matter for
+reading the rest of the chapter. Both the 100 per cent precision of Section 8.4.2 and the 26 and 16
+per cent false-positive rates of Table 8.11 are measured against an honest class produced by a
+language model, and a language model's output is not reliably true merely because nobody
+deliberately corrupted it. At least three of the nineteen honest answers in the panel run — roughly
+one in six, produced by `openai/gpt-oss-120b`, a strong model — were false or rested on a false
+premise, and the judges that identified them as false were scored as having falsely accused an
+honest provider. Every false-positive rate in this chapter is therefore an upper bound on the rate
+attributable to the judge, and the confound is directional: the more capable the judge, the more of
+the generator's own errors it catches and the worse its measured precision looks. This is the
+Phase-1 trap of Section 8.4.3 in a milder form, and it does not disappear by choosing a better
+generator. Removing it requires an honest control whose truth is established independently of the
+model that wrote it — human verification, or the dataset's gold answers used directly rather than
+regenerated — and no such control exists in any run reported here. In particular, the zero
+false-positive rate of Section 8.4.2 and the 26 per cent of Table 8.11 were measured against
+different honest controls and are not on a common scale.
+
+**The weight-distribution measurement uses synthetic artefacts and a local daemon.** The five
+artefacts of Table 8.8 are files of random bytes at plausible model sizes, not real weights, so the
+timings capture transfer, chunking and hashing and say nothing about deserialisation or load into
+an inference runtime. The kubo daemon is on the same host and is reached over its loopback HTTP
+API, so no retrieval from a remote IPFS peer was measured and the cold figures are not network
+transfer figures. The tamper results of Table 8.9 are stronger than the timing results in this
+respect — a content identifier recomputed locally is the same computation wherever the bytes came
+from — but they rest on three constructed cases and one control in a single run, and no adversary
+attempted to construct a collision or to exploit the DAG layout rather than simply substituting
+bytes.
 
 **The negation templates are stilted in ways a real adversary would avoid.** Several of the
 `negate` corruptions read as "Contrary to popular belief, it is completely false that ..." followed
@@ -1068,14 +1743,19 @@ unpredictability, or the validator allow-list. An adaptive red-team exercise, in
 is tasked with maximising undetected fraud against the deployed sampler and judge, is the single
 experiment that would most improve confidence in this system, and it has not been run.
 
-Taken together these seven threats define what the present measurements can and cannot support.
+Taken together these ten threats define what the present measurements can and cannot support.
 They support the claim that the protocol works end to end on real cryptography, a real
-peer-to-peer stack, a real streaming runtime and a real EVM; that warm sub-second time to first
-token is achievable on ordinary CPU hardware; that the auction clears correctly and cheaply at
-small scale; that settlement is correct, value-conserving and affordable on all three resolution
-paths; that verification overhead is a small fraction of cost; and that an honest provider is not
-punished. They do not support any claim about wide-area behaviour, about scaling beyond five
-nodes, about a token's value, about availability guarantees, or about the system's resistance to
-an opponent who is trying. Stating this precisely is what makes the positive results in this
-chapter worth anything, and it is what allows the next phase of the work to be aimed at the
-questions that are actually open.
+peer-to-peer stack, a real streaming runtime, a real IPFS daemon and a real EVM; that warm
+sub-second time to first token is achievable on ordinary CPU hardware; that the auction clears
+correctly and cheaply at small scale and responds to link latency roughly as a round trip plus a
+forwarding hop would predict; that model weights can be distributed by content address and
+independently re-verified, with substitution and corruption both rejected and an honest artefact
+accepted; that settlement is correct, value-conserving and affordable on all three resolution
+paths; that verification overhead is a small fraction of cost; that the recall failure of Section
+8.4 is a property of a small judge rather than of the mechanism or of the judge's lineage; and that
+a majority quorum suppresses false positives relative to its own members. They do not support any
+claim about wide-area behaviour, about deployment across machines, about scaling beyond five nodes,
+about a token's value, about availability guarantees, about the precision of any judge measured
+against a generated honest control, or about the system's resistance to an opponent who is trying.
+Stating this precisely is what makes the positive results in this chapter worth anything, and it is
+what allows the next phase of the work to be aimed at the questions that are actually open.

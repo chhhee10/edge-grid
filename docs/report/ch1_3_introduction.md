@@ -196,9 +196,13 @@ The end-to-end lifecycle of a single job across these five modules is shown in F
 
 A Phase-1 report is judged on the honesty of its scope statement as much as on the ambition of its
 design. The design described above is the target architecture. The implementation submitted with
-this report realises that architecture against the same interfaces but substitutes a locally
-runnable component in four places, for reasons that are recorded here rather than left for the
-examiner to discover. Table 1.1 states each divergence.
+this report realises that architecture against the same interfaces but diverges from it in seven
+places, in six of them by substituting a locally runnable component, for reasons that are recorded
+here rather than left for the examiner to discover. Table 1.1 states each divergence. The seventh
+row is of a different kind and is marked as such: content-addressed weight distribution is
+implemented against the designed external system itself rather than against a local equivalent, and
+what remains outstanding there is the realism of the artefacts and of the network path, not the
+mechanism.
 
 **Table 1.1: Design intent versus the present implementation**
 
@@ -207,7 +211,7 @@ examiner to discover. Table 1.1 states each divergence.
 | Arbitrum Stylus contracts in Rust compiled to WebAssembly | Four Solidity 0.8.24 contracts — `NodeRegistry`, `Marketplace`, `VerificationContract`, `ModelRegistry` — compiled and deployed to a local Hardhat EVM chain (chain id 31337) | No Stylus toolchain is available on the development hardware. The settlement *semantics* — the escrow state machine, the access control, the challenge window, the 80/20 slash split — and the gas measurements are real |
 | Celestia as the data-availability layer | A local namespaced blob store implementing the same interface, batching blobs into blocks and producing genuine binary Merkle inclusion proofs that any verifier can check | The **binding** property — that a provider cannot show a verifier one output and the chain another — is implemented and tested. Celestia's *availability* guarantee, which rests on data-availability sampling by a decentralised validator set, is not reproduced. Substituting a Celestia light node means reimplementing two functions and nothing else |
 | vLLM with PagedAttention on CUDA | Ollama on CPU | The development machine has no NVIDIA GPU. CUDA-specific throughput work is therefore explicitly outside the scope of this phase |
-| IPFS-distributed model weights | Weights resolved through the runtime's local model store, with the model identifier bound on chain to its content hash in `ModelRegistry` | The on-chain binding, which is the security-relevant half, is implemented; content-addressed distribution is not |
+| IPFS-distributed model weights | Implemented, and the only row in this table that is not a substitution: `edgegrid/weights.py` publishes and fetches weights through a real kubo IPFS daemon, recomputing the content identifier from the received bytes before returning them, with a byte-budgeted LRU cache above it. The model identifier remains bound on chain to its content hash in `ModelRegistry` | Measured in Sections 8.2.4 and 8.2.5 over five artefacts of 64 KiB to 48 MiB. Two boundaries remain: the artefacts exercised are synthetic byte sequences rather than real GGUF files, and the daemon is on the same host, so the fetch timings are client-side retrieval and verification cost and not wide-area transfer |
 | Validator agents fine-tuned on TruthfulQA and Chatbot Arena | An off-the-shelf model used as judge, with a curated TruthfulQA-derived question set used for evaluation | No fine-tuning budget or data pipeline. Reported judge accuracy is therefore a lower bound, not an upper one |
 | Economic stake of real value | Test-denominated stake on a local chain | No mainnet deployment |
 | Next.js dashboard and Grafana heatmap | A static operator dashboard served directly by the FastAPI gateway | Reduced client-layer scope for Phase 1; the gateway's OpenAI-compatible endpoint, which is the substantive migration claim, is fully implemented |
@@ -276,16 +280,22 @@ to be evaluated.
 **Chapter 8 — Results and Discussion** reports what the implemented system was measured to do.
 It sets out the experimental protocol and the parameters held constant, presents the four
 experiments — latency, auction convergence, verification accuracy, and cost and settlement —
-together with the settlement measurement taken against a live chain, revisits each of the seven
-objectives of Chapter 3 against the measurement that bears on it, and states the threats to the
-validity of every result reported.
+together with the settlement measurement taken against a live chain and three later measurements
+reported alongside the experiments they extend: content-addressed weight distribution against a real
+IPFS daemon, the auction re-run across containers holding separate network namespaces under
+injected link delay, and the same corruption set re-judged by a panel of larger models under three
+quorum rules. It then revisits each of the seven objectives of Chapter 3 against the measurement
+that bears on it, and states the threats to the validity of every result reported.
 
 **Chapter 9 — Conclusion and Future Work** summarises what has been implemented
 and measured in Phase 1, states the limitations of the present implementation without
-qualification, and sets out the work that remains: a validator pool with model diversity, a
-multi-machine deployment, migration of the data-availability layer to
-Celestia, migration of the settlement contracts to Arbitrum, a CUDA inference path, and zero-
-knowledge machine learning as a replacement for optimistic verification.
+qualification, records that the panel measurement refuted a hypothesis this report itself had
+advanced, and sets out the work that remains: a genuine multi-machine deployment, a paid or
+self-hosted judge tier so that a verification experiment is not truncated by rate limits, a
+human-adjudicated honest set against which judge precision can be measured cleanly, migration of the
+data-availability layer to Celestia, migration of the settlement contracts to Arbitrum, a CUDA
+inference path, weight distribution exercised over a public IPFS swarm with real model files, and
+zero-knowledge machine learning as a replacement for optimistic verification.
 
 ---
 
@@ -508,10 +518,16 @@ the time to first token; token counts are taken from the runtime's own tokeniser
 estimated from whitespace, which would be wrong by thirty to forty per cent for English prose
 and considerably worse for code. Failure paths — connection refused, unknown model, timeout,
 truncated stream — raise distinct named exceptions, so that no caller can ever receive a result
-that appears successful but was not produced by a model. Achievement is measured by the
+that appears successful but was not produced by a model. Weight management is the third clause of
+this objective: weights are obtained by content address through an IPFS daemon and the identifier is
+recomputed from the bytes that arrived before they are returned, so that a node can accept weights
+from a peer it does not trust, and a byte-budgeted least-recently-used cache bounds how much disk
+that consumes. Achievement is measured by the
 inference benchmark, which records per-trial TTFT, total duration, model load time, prompt and
 completion token counts, throughput and host load into `trials.csv` and a statistical summary
-into `warm_summary.json`.
+into `warm_summary.json`, and by the weight-distribution run, which records per-artefact fetch
+times, cache statistics, the recomputed identifier for every fetch, and the outcome of three
+tampering cases against an honest control.
 
 **Objective 4 — To integrate a Layer-2 smart contract architecture to handle decentralized
 identity, escrow and micro-settlements.**

@@ -364,7 +364,8 @@ market test-suite.
 
 Module 3 is the subsystem that actually produces tokens, and it is implemented in
 `inference/engine.py` as a streaming client for a local Ollama runtime, with the hardware
-benchmark and tier classifier in `inference/benchmark.py`.
+benchmark and tier classifier in `inference/benchmark.py` and the content-addressed weight
+distribution path of Section 7.4.6 in `edgegrid/weights.py`.
 
 ### 7.4.1 Runtime Selection, and Why vLLM and CUDA Are Out of Scope
 
@@ -456,6 +457,96 @@ silently substituted model. A `InferenceResult` carries the output text, the mod
 the real token count, the measured TTFT, the total duration, the throughput, the warm flag and
 the SHA-256 of the output, and it is signed by the provider's identity before it leaves the
 node.
+
+### 7.4.6 Content-Addressed Weight Distribution
+
+Objective 3 asks for an edge client that benchmarks its hardware, streams tokens, *and manages
+model weights*. The first two clauses are the subject of the preceding subsections. The third is
+the subject of this one, and it is implemented in `edgegrid/weights.py` against a real kubo IPFS
+daemon brought up by `deploy/ipfs/docker-compose.yml`. The design is described here rather than
+in Chapter 8 because what matters architecturally is the order in which the checks are performed
+and what each of them establishes; how long a fetch took is reported in Chapter 8, in Tables 8.8
+and 8.9.
+
+The path a model identifier travels is short and has exactly three stages: **identifier to
+content identifier, content identifier to local bytes, local bytes to a verified path**. The
+first stage is `WeightResolver.lookup()`. It reads `ModelRegistry` (Section 7.6.1), keyed by the
+keccak-256 hash of the model name, and takes the CID from the `ipfs://` URI the registry records
+alongside the content hash. If no chain deployment is reachable, or the identifier is not
+registered, or the registration has been revoked, it falls back to a local manifest — but the
+fallback is never silent. The returned `ResolvedWeights` carries a `source` field naming which
+authority was used and a `chain_note` field stating why the chain was not, and both are written
+into the experiment's result rows, so a run can never appear to have consulted the chain when it
+did not.
+
+The second stage is `LocalWeightCache`, the bounded cache the module specifies. It is an LRU
+cache governed by a byte budget rather than an entry count, because model weights differ in size
+by three orders of magnitude and a count-based bound would say nothing useful about disk
+occupancy. A hit is served entirely from local disk and does not touch the network at all. An
+insertion that would overrun the budget evicts strictly least-recently-used entries until the
+incoming artefact fits, and names every eviction it performed in the result it returns. An
+artefact larger than the entire budget raises `CacheTooSmall` *before* anything is evicted,
+rather than discarding the whole cache and then failing anyway. The index is guarded by a file
+lock so that several node processes on one machine share the cache safely, and the download
+itself is performed outside that lock, since holding a cross-process lock across a multi-gigabyte
+transfer would serialise every node on the host behind one fetch.
+
+The third stage is the one the whole mechanism exists for. **After the bytes have been received,
+the client recomputes the content identifier from those bytes itself, and a mismatch raises
+rather than returning the weights.** A content identifier is not a label the daemon assigns; it
+is a function of the bytes, and the only way to use it as a commitment is to evaluate that
+function locally. Asking the daemon what it just served verifies nothing whatever, because the
+daemon is precisely the component an adversary would have to compromise in order to serve
+tampered weights. The module therefore carries its own implementation of the UnixFS and dag-pb
+layout — a 262,144-byte chunker, sha2-256 leaves, a balanced DAG of at most 174 links per node —
+so that the CID of the received artefact is derived from first principles and compared against
+the CID that was requested. A disagreement raises `CIDMismatch`, which is never downgraded to a
+warning and never recovered from. Layouts the implementation cannot reproduce, among them
+HAMT-sharded directories, non-default chunkers, hash functions other than sha2-256 and trickle
+DAGs, raise `UnsupportedDAG` rather than being waved through, because each of them yields a
+different identifier for the same bytes and guessing would mean returning weights the module
+cannot vouch for. There is no code path in the module that returns a path to bytes which did not
+verify.
+
+This is the property that permits a node to accept weights from a peer it does not trust, and it
+is worth stating why in full. Under an ordinary HTTP download the client's confidence in what it
+received is confidence in the *server*: it trusts a hostname, a certificate and whoever
+administers the machine behind them, and if that machine is dishonest the client has no means of
+noticing. Under content addressing the client's confidence is confidence in *arithmetic*. The
+identifier was fixed before the transfer began; the check is performed on the bytes that actually
+arrived; and a server that substitutes different bytes produces a different identifier and is
+detected with certainty. The identity of the party that served the artefact therefore drops out
+of the trust argument entirely, which is what makes it safe to fetch weights from an arbitrary
+peer, a public gateway, or a cache of unknown provenance. This is the same shape of reasoning as
+the signed `NodeRecord` of Section 7.2.2 and the Merkle commitment of Section 7.5.1, and it is
+the architectural principle stated in Section 7.1: authority in this system derives from
+cryptography, never from a network position.
+
+A second, independent check closes the loop back to the chain. Where the CID was obtained from
+`ModelRegistry`, the SHA-256 of the fetched artefact is compared against the `contentHash` the
+registry records, and a disagreement raises `ContentHashMismatch`. The two checks answer
+different questions: the CID check establishes that the bytes received are the bytes the CID
+denotes, while the content-hash check establishes that those bytes are the ones the model
+identifier was bound to on chain by its publisher. Together they turn `JobRequest.model` from an
+unenforced string into an enforceable commitment — the concern raised in Section 7.6.1, where
+`ModelRegistry` was introduced as the on-chain half of a mechanism whose off-chain half did not
+then exist. The registry says which bytes; IPFS supplies them; the client proves that the two
+agree before the weights are used. Where a caller elects to skip the SHA-256 re-read on a cache
+*hit*, which for a multi-gigabyte artefact is minutes of disk, the resolved record sets
+`content_hash_checked` to `False` so that the omission is visible in the results; the CID check
+on download is never skippable.
+
+One distinction must not be blurred. The data availability layer of Section 7.5.2 is a **local
+stand-in**: `edgegrid/da.py` is this project's own code, reimplementing Celestia's commitment
+property without Celestia, and it therefore delivers the binding guarantee but not the
+availability guarantee. The weight distribution path is **not** a stand-in of that kind. It
+speaks to an unmodified third-party kubo daemon over the real IPFS HTTP API, the identifiers it
+verifies are real IPFS CIDs, and the bytes make a genuine round trip through software this
+project did not write. The two are different in kind, and Section 7.8 records them as separate
+entries for that reason. What the weight path shares with the DA layer is only that the daemon
+in question runs locally rather than as a member of the public IPFS swarm, which bears on
+reachability and on retrieval time but not on the verification property, since that property is
+established by the receiving client and holds against any source whatsoever.
 
 ---
 
@@ -654,6 +745,16 @@ implementation's own documentation, together with the corresponding operational 
 that quorum be set above `n/2` in any deployment where validators are not trusted. Cases in
 which both sides independently reach quorum are flagged as `split` rather than silently
 resolved.
+
+Until recently the case for composing judges in this way was an argument rather than a
+measurement. It is now the latter. Chapter 8 reports a panel of distinct judge models evaluated
+against the two corruption strategies on which a single small judge failed, and finds that
+applying a majority rule across the panel lowers the false-positive rate below that of either
+individually reliable member while leaving recall essentially unchanged. The quorum is therefore
+not only the defence against a dishonest validator for which it was designed; it also measurably
+improves accuracy against validators that are honest but fallible. The figures, together with the
+caveat that the measured panel included members whose completion rate was too low for their votes
+to carry weight, belong to Chapter 8 and are not repeated here.
 
 ---
 
@@ -880,7 +981,7 @@ exactly.
 ## 7.8 Scope and Limitations
 
 The design set out in the Phase-1 synopsis names several specific external systems. The
-implemented prototype substitutes locally runnable equivalents for four of them. These
+implemented prototype substitutes locally runnable equivalents for six of them. These six
 substitutions are set out here explicitly, with the reason for each and the migration path back
 to the designed component, because a declared limitation is a scope decision whereas an
 undeclared one is a defect discovered by the examiner.
@@ -896,9 +997,16 @@ component is the only thing that changes.
 | 3 | vLLM with PagedAttention on CUDA GPUs | Ollama streaming runtime on CPU | The development hardware has no NVIDIA GPU (`detected_by = "no accelerator probe matched"`, Tier 1); an implemented but never-executed CUDA path would be an unverified claim | The engine is reached through one `run()` entry point returning a signed `InferenceResult`; a vLLM backend is an alternative implementation of that method |
 | 4 | Real economic stake in a live token | Testnet value on a local chain; 1 GRID == 1 ether == 10^18 wei, minimum stake 10 GRID | No token has been issued and none should be; the mechanism under test is the accounting and the incentive structure, not the market price of a coin | Unit accounting is already integer wei and identical to a production deployment; only the chain and the token contract change |
 | 5 | Validator agents fine-tuned on TruthfulQA and Chatbot Arena preference data | Off-the-shelf judge models applying a fixed five-point rubric, with the backend always explicitly named and recorded | Fine-tuning a judge was not feasible in Phase 1; an off-the-shelf judge whose self-consistency is *measured* is more defensible than a fine-tuned one whose behaviour is assumed | The `Judge` abstraction takes a backend and a model identifier; a fine-tuned model substitutes at that boundary. `verification/paraphrase_check.py` already provides the instrument for evaluating whether the substitution improves matters |
-| 6 | "Production-deployed" network of real third-party operators | A prototype running on a single development host and in multi-process local networks, with all results recorded under `docs/results/` | Phase 1 is a design-and-prototype phase; no external operator has run a node | Explicitly deferred to future work. **The system is not deployed, and no claim of deployment is made anywhere in this report** |
+| 6 | "Production-deployed" network of real third-party operators | A prototype running on one development host, as multiple processes and, for the network experiments, as containers each holding its own network namespace on a private bridge, with all results recorded under `docs/results/` | Phase 1 is a design-and-prototype phase; no external operator has run a node | Explicitly deferred to future work. **The system is not deployed, and no claim of deployment is made anywhere in this report** |
 
-Four further limitations are recorded for completeness.
+One component named in the synopsis is deliberately absent from this table, and the omission is
+the point. Content-addressed distribution of model weights over IPFS, described in
+Section 7.4.6, is implemented against a real kubo daemon rather than against a locally written
+equivalent, and is therefore not a substitution at all. Together with the EVM of row 1, it is one
+of the two places where the designed external system is genuinely present; it should not be read
+as being of the same kind as the data availability stand-in of row 2.
+
+Five further limitations are recorded for completeness.
 
 **Sample sizes are small.** The cold/warm latency comparison in
 `docs/results/inference-benchmark-20260902T101341Z` rests on three matched pairs, and the
@@ -913,19 +1021,42 @@ quorum of one is appropriate only for a single-validator prototype; any deployme
 validators are not mutually trusted requires a quorum above half the pool, since the tally
 checks `fail` before `pass`.
 
-**Model-weight distribution is not implemented.** The design specifies IPFS-based retrieval of
-GGUF weights by content hash. `ModelRegistry` provides the on-chain binding from model
-identifier to content hash, but the automated downloader and LRU cache are future work; models
-are presently pulled by Ollama in the ordinary way.
+**Model-weight distribution is implemented; two things about it are not.** The design specifies
+IPFS-based retrieval of weights by content hash, with an LRU cache and verification of what was
+received. That is implemented in `edgegrid/weights.py` against a real kubo daemon, as described
+in Section 7.4.6, and the earlier statement in this report that it was unimplemented is
+superseded. Two boundaries remain. The artefacts exercised in the recorded runs are synthetic
+byte sequences of realistic sizes rather than real GGUF files, since the verification property
+under test is a property of bytes and is indifferent to what those bytes encode; and the verified
+local path the resolver returns is not yet handed to the Ollama runtime as its model source, so
+models are still pulled by Ollama in the ordinary way at inference time. Joining the two is a
+matter of configuring the runtime's model directory and is future work, not a design gap.
+
+**The network topology is containers on one host, not machines on a network.** Every timing in
+the earlier network experiments was taken with all peers as processes on a single host sharing
+one loopback interface, which made the path between peers a kernel memory copy with no bridge,
+no interface queue and no address distinction. The present deployment model, implemented in
+`discovery/run_swarm.py` and `deploy/grid/`, gives each node its own container with its own
+network namespace and a distinct address on a private bridge (subnet 10.77.0.0/24), so that
+packets cross veth pairs and the bridge's forwarding path, every node binds the same port — which
+is impossible on shared loopback and is the cleanest evidence that the namespaces are genuinely
+separate — and `tc netem` can shape the link per node. **This is not a LAN deployment and must
+not be read as one.** It remains one kernel, one host and one clock, with no physical network
+interface, no switch, no MTU negotiation and no wide-area path. What it removes is the loopback
+shortcut; what it adds is a link whose delay is controllable. A deployment across genuinely
+separate machines remains future work.
 
 **Geographic proximity is not exercised.** The latency argument for edge inference rests in part
-on routing a request to a physically nearby node. All nodes in the present experiments run on
-one host or on one local network, so the measured latencies isolate model and runtime behaviour
-rather than network distance, and no claim about geographic routing gains is made.
+on routing a request to a physically nearby node. All nodes in the present experiments run on one
+host, whether as processes or as containers, so the measured latencies isolate model and runtime
+behaviour rather than network distance, and no claim about geographic routing gains is made. The
+injected delays described above establish how the protocol responds to latency; they do not
+establish what latency a real deployment would encounter.
 
-Taken together, these six substitutions and four limitations define the boundary of Phase 1. The
+Taken together, these six substitutions and five limitations define the boundary of Phase 1. The
 network protocol, the auction, the measurement methodology, the commitment chain, the
-verification logic and the settlement contracts are all implemented and exercised against real
-cryptography, a real peer-to-peer stack, a real language-model runtime and a real EVM. What has
-been substituted is, in every case, a hosted external dependency, and in every case the
-substitution preserves the property the rest of the system depends upon.
+verification logic, the weight distribution path and the settlement contracts are all implemented
+and exercised against real cryptography, a real peer-to-peer stack, a real language-model
+runtime, a real IPFS daemon and a real EVM. What has been substituted is, in every case, a hosted
+external dependency, and in every case the substitution preserves the property the rest of the
+system depends upon.
