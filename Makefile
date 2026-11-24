@@ -29,7 +29,7 @@ schemas:  ## regenerate shared/schemas.md from edgegrid/schemas.py
 	@echo "wrote shared/schemas.md"
 
 net:  ## run a 3-node P2P network end to end
-	$(PY) discovery/run_network.py --nodes 3
+	$(PY) -m discovery.run_network --nodes 3
 
 gateway:  ## serve the OpenAI-compatible gateway + operator dashboard on :8000
 	$(PY) -m uvicorn gateway.app:app --port 8000 --reload
